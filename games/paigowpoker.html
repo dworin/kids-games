@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pai Gow Poker - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .game-table {
+            background: linear-gradient(135deg, #1a472a, #2d5a3f);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 700px;
+        }
+
+        .hand-area {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+
+        .hand-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hand-rank {
+            color: #ffd700;
+            font-weight: 700;
+        }
+
+        .cards-row {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-height: 90px;
+        }
+
+        .card {
+            width: 60px;
+            height: 84px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .card:hover:not(.disabled) {
+            transform: translateY(-5px);
+        }
+
+        .card.selected {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(255, 215, 0, 0.5);
+            border: 3px solid #ffd700;
+        }
+
+        .card.disabled {
+            cursor: default;
+            opacity: 0.9;
+        }
+
+        .card.facedown {
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: transparent;
+        }
+
+        .card.facedown::after {
+            content: '🎴';
+            font-size: 2rem;
+        }
+
+        .card .suit {
+            font-size: 1rem;
+        }
+
+        .card.hearts, .card.diamonds { color: #d32f2f; }
+        .card.clubs, .card.spades { color: #212121; }
+        .card.joker {
+            background: linear-gradient(135deg, #ffd700, #ffeb3b);
+            color: #7b1fa2;
+        }
+
+        .drop-zone {
+            min-height: 90px;
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 10px;
+        }
+
+        .drop-zone.highlight {
+            border-color: #ffd700;
+            background: rgba(255,215,0,0.1);
+        }
+
+        .drop-zone .placeholder {
+            color: rgba(255,255,255,0.4);
+            font-size: 0.9rem;
+        }
+
+        .chips-display {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .chips-display .amount {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #ffd700;
+        }
+
+        .betting-area {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+
+        .chip {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: 3px dashed rgba(255,255,255,0.5);
+        }
+
+        .chip:hover { transform: scale(1.1); }
+        .chip.chip-5 { background: #e53935; color: white; }
+        .chip.chip-25 { background: #43a047; color: white; }
+        .chip.chip-100 { background: #1e88e5; color: white; }
+        .chip.chip-500 { background: #8e24aa; color: white; }
+
+        .current-bet {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 1.2rem;
+        }
+
+        .current-bet .amount {
+            color: #ffd700;
+            font-weight: 700;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+
+        .result-display {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .result-display.win {
+            background: rgba(76, 175, 80, 0.3);
+            color: #81c784;
+        }
+
+        .result-display.lose {
+            background: rgba(244, 67, 54, 0.3);
+            color: #e57373;
+        }
+
+        .result-display.push {
+            background: rgba(255, 193, 7, 0.3);
+            color: #ffd54f;
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 10px;
+            align-items: center;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+
+        .comparison .vs {
+            color: var(--text-secondary);
+        }
+
+        .comparison .result {
+            font-weight: 700;
+        }
+
+        .comparison .result.win { color: #81c784; }
+        .comparison .result.lose { color: #e57373; }
+
+        .instructions-panel {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .instructions-panel h4 {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 500px) {
+            .card {
+                width: 45px;
+                height: 63px;
+                font-size: 1rem;
+            }
+            .card .suit { font-size: 0.8rem; }
+            .cards-row { gap: 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Pai Gow Poker</h1>
+            <a href="../index.html" class="back-btn">&#8592; Back to Games</a>
+        </div>
+
+        <div id="game" class="game-container">
+            <div class="chips-display">
+                <div class="label">Your Chips</div>
+                <div class="amount" id="playerChips">1000</div>
+            </div>
+
+            <!-- Betting Phase -->
+            <div id="bettingPhase">
+                <div class="current-bet">
+                    Current Bet: <span class="amount" id="currentBet">0</span>
+                </div>
+
+                <div class="betting-area">
+                    <div class="chip chip-5" onclick="addBet(5)">5</div>
+                    <div class="chip chip-25" onclick="addBet(25)">25</div>
+                    <div class="chip chip-100" onclick="addBet(100)">100</div>
+                    <div class="chip chip-500" onclick="addBet(500)">500</div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn" onclick="clearBet()">Clear Bet</button>
+                    <button class="btn btn-success" onclick="deal()">Deal</button>
+                </div>
+            </div>
+
+            <!-- Game Table -->
+            <div class="game-table" id="gameTable" style="display: none;">
+                <!-- Dealer's Hands -->
+                <div class="hand-area">
+                    <div class="hand-label">
+                        <span>Dealer's High Hand (5 cards)</span>
+                        <span class="hand-rank" id="dealerHighRank"></span>
+                    </div>
+                    <div class="cards-row" id="dealerHigh"></div>
+                </div>
+
+                <div class="hand-area">
+                    <div class="hand-label">
+                        <span>Dealer's Low Hand (2 cards)</span>
+                        <span class="hand-rank" id="dealerLowRank"></span>
+                    </div>
+                    <div class="cards-row" id="dealerLow"></div>
+                </div>
+
+                <!-- Result Display -->
+                <div class="result-display" id="resultDisplay" style="display: none;"></div>
+
+                <!-- Player's Setting Area -->
+                <div id="settingPhase">
+                    <div class="hand-area">
+                        <div class="hand-label">
+                            <span>Your High Hand (5 cards)</span>
+                            <span class="hand-rank" id="playerHighRank"></span>
+                        </div>
+                        <div class="drop-zone" id="playerHigh" onclick="moveSelectedToHigh()">
+                            <span class="placeholder">Click cards below, then click here</span>
+                        </div>
+                    </div>
+
+                    <div class="hand-area">
+                        <div class="hand-label">
+                            <span>Your Low Hand (2 cards)</span>
+                            <span class="hand-rank" id="playerLowRank"></span>
+                        </div>
+                        <div class="drop-zone" id="playerLow" onclick="moveSelectedToLow()">
+                            <span class="placeholder">Select 2 cards for low hand</span>
+                        </div>
+                    </div>
+
+                    <div class="hand-area">
+                        <div class="hand-label">Your Cards (click to select)</div>
+                        <div class="cards-row" id="playerCards"></div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn" onclick="resetHands()">Reset</button>
+                        <button class="btn btn-secondary" onclick="autoSet()">House Way</button>
+                        <button class="btn btn-success" onclick="confirmHands()">Set Hands</button>
+                    </div>
+                </div>
+
+                <!-- Showdown Phase -->
+                <div id="showdownPhase" style="display: none;">
+                    <div class="hand-area">
+                        <div class="hand-label">
+                            <span>Your High Hand</span>
+                            <span class="hand-rank" id="playerHighRankFinal"></span>
+                        </div>
+                        <div class="cards-row" id="playerHighFinal"></div>
+                    </div>
+
+                    <div class="hand-area">
+                        <div class="hand-label">
+                            <span>Your Low Hand</span>
+                            <span class="hand-rank" id="playerLowRankFinal"></span>
+                        </div>
+                        <div class="cards-row" id="playerLowFinal"></div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-success" onclick="newHand()">New Hand</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="instructions-panel">
+                <h4>How to Play</h4>
+                <ul>
+                    <li>Set your 7 cards into a 5-card <strong>high hand</strong> and 2-card <strong>low hand</strong></li>
+                    <li>Your high hand must rank <strong>higher</strong> than your low hand</li>
+                    <li>Beat both dealer hands to <strong>win</strong>; lose both to <strong>lose</strong>; split is a <strong>push</strong></li>
+                    <li>The <strong>Joker</strong> completes straights/flushes, otherwise counts as Ace</li>
+                    <li><strong>House Way</strong> auto-sets your hand using optimal strategy</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <h3 style="margin-bottom: 15px;">Statistics</h3>
+            <div id="stats"></div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        // Card constants
+        const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'];
+        const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        const SUIT_SYMBOLS = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' };
+
+        // Game state
+        let deck = [];
+        let playerCards = [];
+        let dealerCards = [];
+        let playerHigh = [];
+        let playerLow = [];
+        let dealerHigh = [];
+        let dealerLow = [];
+        let selectedCards = [];
+        let chips = parseInt(localStorage.getItem('paigowChips')) || 1000;
+        let currentBet = 0;
+        let gamePhase = 'betting'; // betting, setting, showdown
+
+        function init() {
+            updateChipsDisplay();
+            GameUtils.renderStats('paigowpoker', 'stats');
+        }
+
+        function createDeck() {
+            const deck = [];
+            for (const suit of SUITS) {
+                for (const rank of RANKS) {
+                    deck.push({ rank, suit, isJoker: false });
+                }
+            }
+            // Add joker
+            deck.push({ rank: 'Joker', suit: 'joker', isJoker: true });
+            return GameUtils.shuffleArray(deck);
+        }
+
+        function addBet(amount) {
+            if (chips >= amount) {
+                currentBet += amount;
+                chips -= amount;
+                updateChipsDisplay();
+            }
+        }
+
+        function clearBet() {
+            chips += currentBet;
+            currentBet = 0;
+            updateChipsDisplay();
+        }
+
+        function updateChipsDisplay() {
+            document.getElementById('playerChips').textContent = chips;
+            document.getElementById('currentBet').textContent = currentBet;
+            localStorage.setItem('paigowChips', chips);
+        }
+
+        function deal() {
+            if (currentBet === 0) {
+                GameUtils.showModal('Place a Bet', 'Please place a bet before dealing.', [
+                    { text: 'OK', primary: true }
+                ]);
+                return;
+            }
+
+            deck = createDeck();
+            playerCards = deck.splice(0, 7);
+            dealerCards = deck.splice(0, 7);
+
+            // Sort player cards by rank for easier viewing
+            playerCards.sort((a, b) => getCardValue(b) - getCardValue(a));
+
+            // Set dealer's hand using house way
+            const dealerSet = houseWay([...dealerCards]);
+            dealerHigh = dealerSet.high;
+            dealerLow = dealerSet.low;
+
+            // Reset player hands
+            playerHigh = [];
+            playerLow = [];
+            selectedCards = [];
+
+            gamePhase = 'setting';
+            document.getElementById('bettingPhase').style.display = 'none';
+            document.getElementById('gameTable').style.display = 'block';
+            document.getElementById('settingPhase').style.display = 'block';
+            document.getElementById('showdownPhase').style.display = 'none';
+            document.getElementById('resultDisplay').style.display = 'none';
+
+            renderDealerHands(true); // Face down
+            renderPlayerCards();
+            renderPlayerHands();
+        }
+
+        function getCardValue(card) {
+            if (card.isJoker) return 14; // Treat as Ace for sorting
+            const values = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+            return values[card.rank];
+        }
+
+        function createCardElement(card, facedown = false, clickable = false, index = -1) {
+            const el = document.createElement('div');
+            el.className = 'card';
+
+            if (facedown) {
+                el.classList.add('facedown');
+            } else if (card.isJoker) {
+                el.classList.add('joker');
+                el.innerHTML = `<span>🃏</span><span class="suit">Joker</span>`;
+            } else {
+                el.classList.add(card.suit);
+                el.innerHTML = `<span>${card.rank}</span><span class="suit">${SUIT_SYMBOLS[card.suit]}</span>`;
+            }
+
+            if (clickable && index >= 0) {
+                el.dataset.index = index;
+                el.addEventListener('click', () => toggleCardSelection(index));
+            } else {
+                el.classList.add('disabled');
+            }
+
+            return el;
+        }
+
+        function toggleCardSelection(index) {
+            const idx = selectedCards.indexOf(index);
+            if (idx >= 0) {
+                selectedCards.splice(idx, 1);
+            } else {
+                selectedCards.push(index);
+            }
+            renderPlayerCards();
+        }
+
+        function renderPlayerCards() {
+            const container = document.getElementById('playerCards');
+            container.innerHTML = '';
+
+            playerCards.forEach((card, index) => {
+                const el = createCardElement(card, false, true, index);
+                if (selectedCards.includes(index)) {
+                    el.classList.add('selected');
+                }
+                container.appendChild(el);
+            });
+        }
+
+        function renderPlayerHands() {
+            const highContainer = document.getElementById('playerHigh');
+            const lowContainer = document.getElementById('playerLow');
+
+            highContainer.innerHTML = playerHigh.length === 0 ?
+                '<span class="placeholder">Click cards below, then click here</span>' : '';
+            lowContainer.innerHTML = playerLow.length === 0 ?
+                '<span class="placeholder">Select 2 cards for low hand</span>' : '';
+
+            playerHigh.forEach(card => {
+                highContainer.appendChild(createCardElement(card));
+            });
+
+            playerLow.forEach(card => {
+                lowContainer.appendChild(createCardElement(card));
+            });
+
+            // Update rank displays
+            document.getElementById('playerHighRank').textContent =
+                playerHigh.length === 5 ? getHandName(evaluateHand(playerHigh)) : '';
+            document.getElementById('playerLowRank').textContent =
+                playerLow.length === 2 ? getHandName(evaluateHand(playerLow)) : '';
+        }
+
+        function renderDealerHands(facedown = false) {
+            const highContainer = document.getElementById('dealerHigh');
+            const lowContainer = document.getElementById('dealerLow');
+
+            highContainer.innerHTML = '';
+            lowContainer.innerHTML = '';
+
+            dealerHigh.forEach(card => {
+                highContainer.appendChild(createCardElement(card, facedown));
+            });
+
+            dealerLow.forEach(card => {
+                lowContainer.appendChild(createCardElement(card, facedown));
+            });
+
+            if (!facedown) {
+                document.getElementById('dealerHighRank').textContent = getHandName(evaluateHand(dealerHigh));
+                document.getElementById('dealerLowRank').textContent = getHandName(evaluateHand(dealerLow));
+            } else {
+                document.getElementById('dealerHighRank').textContent = '';
+                document.getElementById('dealerLowRank').textContent = '';
+            }
+        }
+
+        function moveSelectedToHigh() {
+            if (selectedCards.length === 0) return;
+
+            selectedCards.sort((a, b) => b - a).forEach(index => {
+                if (playerHigh.length < 5) {
+                    playerHigh.push(playerCards[index]);
+                    playerCards.splice(index, 1);
+                }
+            });
+
+            selectedCards = [];
+            renderPlayerCards();
+            renderPlayerHands();
+        }
+
+        function moveSelectedToLow() {
+            if (selectedCards.length === 0) return;
+
+            selectedCards.sort((a, b) => b - a).forEach(index => {
+                if (playerLow.length < 2) {
+                    playerLow.push(playerCards[index]);
+                    playerCards.splice(index, 1);
+                }
+            });
+
+            selectedCards = [];
+            renderPlayerCards();
+            renderPlayerHands();
+        }
+
+        function resetHands() {
+            playerCards = [...playerCards, ...playerHigh, ...playerLow];
+            playerCards.sort((a, b) => getCardValue(b) - getCardValue(a));
+            playerHigh = [];
+            playerLow = [];
+            selectedCards = [];
+            renderPlayerCards();
+            renderPlayerHands();
+        }
+
+        function autoSet() {
+            // Combine all cards back
+            const allCards = [...playerCards, ...playerHigh, ...playerLow];
+            const set = houseWay(allCards);
+
+            playerHigh = set.high;
+            playerLow = set.low;
+            playerCards = [];
+            selectedCards = [];
+
+            renderPlayerCards();
+            renderPlayerHands();
+        }
+
+        function confirmHands() {
+            if (playerHigh.length !== 5 || playerLow.length !== 2) {
+                GameUtils.showModal('Invalid Hands', 'Please set exactly 5 cards in your high hand and 2 cards in your low hand.', [
+                    { text: 'OK', primary: true }
+                ]);
+                return;
+            }
+
+            const highRank = evaluateHand(playerHigh);
+            const lowRank = evaluateHand(playerLow);
+
+            // Check if high hand beats low hand (fouling rule)
+            if (compareHands(highRank, lowRank) < 0) {
+                GameUtils.showModal('Foul!', 'Your high hand must rank higher than your low hand. Please rearrange.', [
+                    { text: 'OK', primary: true }
+                ]);
+                return;
+            }
+
+            showdown();
+        }
+
+        function showdown() {
+            gamePhase = 'showdown';
+
+            // Reveal dealer's hands
+            renderDealerHands(false);
+
+            // Show player's final hands
+            document.getElementById('settingPhase').style.display = 'none';
+            document.getElementById('showdownPhase').style.display = 'block';
+
+            const playerHighFinal = document.getElementById('playerHighFinal');
+            const playerLowFinal = document.getElementById('playerLowFinal');
+
+            playerHighFinal.innerHTML = '';
+            playerLowFinal.innerHTML = '';
+
+            playerHigh.forEach(card => playerHighFinal.appendChild(createCardElement(card)));
+            playerLow.forEach(card => playerLowFinal.appendChild(createCardElement(card)));
+
+            const playerHighRank = evaluateHand(playerHigh);
+            const playerLowRank = evaluateHand(playerLow);
+            const dealerHighRank = evaluateHand(dealerHigh);
+            const dealerLowRank = evaluateHand(dealerLow);
+
+            document.getElementById('playerHighRankFinal').textContent = getHandName(playerHighRank);
+            document.getElementById('playerLowRankFinal').textContent = getHandName(playerLowRank);
+
+            // Compare hands
+            const highResult = compareHands(playerHighRank, dealerHighRank);
+            const lowResult = compareHands(playerLowRank, dealerLowRank);
+
+            // Dealer wins ties
+            const playerWinsHigh = highResult > 0;
+            const playerWinsLow = lowResult > 0;
+
+            const resultDisplay = document.getElementById('resultDisplay');
+            resultDisplay.style.display = 'block';
+
+            if (playerWinsHigh && playerWinsLow) {
+                // Player wins
+                const winnings = currentBet * 2;
+                chips += winnings;
+                resultDisplay.className = 'result-display win';
+                resultDisplay.innerHTML = `You Win! +${currentBet}<br>
+                    <small>High: ${playerWinsHigh ? 'WIN' : 'LOSE'} | Low: ${playerWinsLow ? 'WIN' : 'LOSE'}</small>`;
+                GameUtils.stats.update('paigowpoker', 'win');
+            } else if (!playerWinsHigh && !playerWinsLow) {
+                // Dealer wins
+                resultDisplay.className = 'result-display lose';
+                resultDisplay.innerHTML = `Dealer Wins! -${currentBet}<br>
+                    <small>High: ${playerWinsHigh ? 'WIN' : 'LOSE'} | Low: ${playerWinsLow ? 'WIN' : 'LOSE'}</small>`;
+                GameUtils.stats.update('paigowpoker', 'loss');
+            } else {
+                // Push
+                chips += currentBet;
+                resultDisplay.className = 'result-display push';
+                resultDisplay.innerHTML = `Push - Bet Returned<br>
+                    <small>High: ${playerWinsHigh ? 'WIN' : 'LOSE'} | Low: ${playerWinsLow ? 'WIN' : 'LOSE'}</small>`;
+                GameUtils.stats.update('paigowpoker', 'draw');
+            }
+
+            updateChipsDisplay();
+            GameUtils.renderStats('paigowpoker', 'stats');
+
+            // Check if out of chips
+            if (chips <= 0) {
+                setTimeout(() => {
+                    GameUtils.showModal('Out of Chips!', 'You\'ve run out of chips. Here\'s 1000 to keep playing!', [
+                        { text: 'Thanks!', primary: true, action: () => {
+                            chips = 1000;
+                            updateChipsDisplay();
+                        }}
+                    ]);
+                }, 500);
+            }
+        }
+
+        function newHand() {
+            currentBet = 0;
+            gamePhase = 'betting';
+            document.getElementById('bettingPhase').style.display = 'block';
+            document.getElementById('gameTable').style.display = 'none';
+            updateChipsDisplay();
+        }
+
+        // Hand evaluation
+        function evaluateHand(cards) {
+            if (cards.length === 2) {
+                return evaluateTwoCardHand(cards);
+            }
+            return evaluateFiveCardHand(cards);
+        }
+
+        function evaluateTwoCardHand(cards) {
+            const values = cards.map(c => getCardValue(c)).sort((a, b) => b - a);
+
+            // Check for pair
+            if (values[0] === values[1]) {
+                return { rank: 1, values: values, name: 'Pair' };
+            }
+
+            return { rank: 0, values: values, name: 'High Card' };
+        }
+
+        function evaluateFiveCardHand(cards) {
+            // Handle joker
+            let workingCards = [...cards];
+            const jokerIndex = workingCards.findIndex(c => c.isJoker);
+            const hasJoker = jokerIndex >= 0;
+
+            if (hasJoker) {
+                // Try all possible joker substitutions and return best hand
+                return getBestJokerHand(workingCards, jokerIndex);
+            }
+
+            return evaluateRegularHand(workingCards);
+        }
+
+        function getBestJokerHand(cards, jokerIndex) {
+            const nonJokerCards = cards.filter((_, i) => i !== jokerIndex);
+            const suits = SUITS;
+            const ranks = RANKS;
+
+            let bestHand = null;
+
+            // Try joker as each possible card
+            for (const suit of suits) {
+                for (const rank of ranks) {
+                    const testCards = [...nonJokerCards, { rank, suit, isJoker: false }];
+                    const hand = evaluateRegularHand(testCards);
+
+                    if (!bestHand || compareHands(hand, bestHand) > 0) {
+                        bestHand = hand;
+                    }
+                }
+            }
+
+            // Default to Ace if nothing better found
+            if (!bestHand) {
+                const testCards = [...nonJokerCards, { rank: 'A', suit: 'spades', isJoker: false }];
+                bestHand = evaluateRegularHand(testCards);
+            }
+
+            return bestHand;
+        }
+
+        function evaluateRegularHand(cards) {
+            const values = cards.map(c => getCardValue(c)).sort((a, b) => b - a);
+            const suits = cards.map(c => c.suit);
+
+            const isFlush = suits.every(s => s === suits[0]);
+            const isStraight = checkStraight(values);
+            const counts = getCounts(values);
+
+            // Royal Flush
+            if (isFlush && isStraight && values[0] === 14) {
+                return { rank: 9, values, name: 'Royal Flush' };
+            }
+
+            // Straight Flush
+            if (isFlush && isStraight) {
+                return { rank: 8, values, name: 'Straight Flush' };
+            }
+
+            // Four of a Kind
+            if (counts[0].count === 4) {
+                return { rank: 7, values: [counts[0].value, counts[1].value], name: 'Four of a Kind' };
+            }
+
+            // Full House
+            if (counts[0].count === 3 && counts[1].count === 2) {
+                return { rank: 6, values: [counts[0].value, counts[1].value], name: 'Full House' };
+            }
+
+            // Flush
+            if (isFlush) {
+                return { rank: 5, values, name: 'Flush' };
+            }
+
+            // Straight
+            if (isStraight) {
+                return { rank: 4, values, name: 'Straight' };
+            }
+
+            // Three of a Kind
+            if (counts[0].count === 3) {
+                return { rank: 3, values: [counts[0].value, ...counts.slice(1).map(c => c.value)], name: 'Three of a Kind' };
+            }
+
+            // Two Pair
+            if (counts[0].count === 2 && counts[1].count === 2) {
+                return { rank: 2, values: [counts[0].value, counts[1].value, counts[2].value], name: 'Two Pair' };
+            }
+
+            // One Pair
+            if (counts[0].count === 2) {
+                return { rank: 1, values: [counts[0].value, ...counts.slice(1).map(c => c.value)], name: 'Pair' };
+            }
+
+            // High Card
+            return { rank: 0, values, name: 'High Card' };
+        }
+
+        function checkStraight(values) {
+            const sorted = [...values].sort((a, b) => b - a);
+
+            // Check regular straight
+            let isRegular = true;
+            for (let i = 0; i < sorted.length - 1; i++) {
+                if (sorted[i] - sorted[i + 1] !== 1) {
+                    isRegular = false;
+                    break;
+                }
+            }
+            if (isRegular) return true;
+
+            // Check wheel (A-2-3-4-5)
+            if (sorted[0] === 14 && sorted[1] === 5 && sorted[2] === 4 && sorted[3] === 3 && sorted[4] === 2) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function getCounts(values) {
+            const countMap = {};
+            values.forEach(v => {
+                countMap[v] = (countMap[v] || 0) + 1;
+            });
+
+            return Object.entries(countMap)
+                .map(([value, count]) => ({ value: parseInt(value), count }))
+                .sort((a, b) => b.count - a.count || b.value - a.value);
+        }
+
+        function compareHands(hand1, hand2) {
+            if (hand1.rank !== hand2.rank) {
+                return hand1.rank - hand2.rank;
+            }
+
+            for (let i = 0; i < hand1.values.length; i++) {
+                if (hand1.values[i] !== hand2.values[i]) {
+                    return hand1.values[i] - hand2.values[i];
+                }
+            }
+
+            return 0; // Exact tie - dealer wins in actual game
+        }
+
+        function getHandName(hand) {
+            return hand.name;
+        }
+
+        // House Way - simplified optimal strategy
+        function houseWay(cards) {
+            cards.sort((a, b) => getCardValue(b) - getCardValue(a));
+
+            // Try all combinations and find best valid split
+            const combinations = getCombinations(cards, 2);
+            let bestSplit = null;
+            let bestScore = -Infinity;
+
+            for (const lowCards of combinations) {
+                const highCards = cards.filter(c => !lowCards.includes(c));
+
+                const lowRank = evaluateHand(lowCards);
+                const highRank = evaluateHand(highCards);
+
+                // Must not foul
+                if (compareHands(highRank, lowRank) < 0) continue;
+
+                // Score: prioritize strong low hand while maintaining decent high hand
+                const score = highRank.rank * 100 + lowRank.rank * 50 +
+                    highRank.values[0] + lowRank.values[0] * 0.5;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestSplit = { high: highCards, low: lowCards };
+                }
+            }
+
+            // Fallback: highest 2 cards in low (simple split)
+            if (!bestSplit) {
+                bestSplit = {
+                    low: cards.slice(0, 2),
+                    high: cards.slice(2)
+                };
+            }
+
+            return bestSplit;
+        }
+
+        function getCombinations(arr, size) {
+            const result = [];
+
+            function combine(start, combo) {
+                if (combo.length === size) {
+                    result.push([...combo]);
+                    return;
+                }
+
+                for (let i = start; i < arr.length; i++) {
+                    combo.push(arr[i]);
+                    combine(i + 1, combo);
+                    combo.pop();
+                }
+            }
+
+            combine(0, []);
+            return result;
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 10 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 12 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
@@ -18,7 +18,9 @@ A collection of 10 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── checkers.html   # Multi-jumps, king promotion
     ├── chess.html      # Full rules (castling, en passant, promotion)
     ├── rushhour.html   # Sliding block puzzle, 20 levels
-    └── battleship.html # Naval combat with ship placement
+    ├── battleship.html # Naval combat with ship placement
+    ├── minesweeper.html # Classic mine-clearing puzzle
+    └── paigowpoker.html # Casino card game with hand setting
 ```
 
 ## Key Features
@@ -65,6 +67,23 @@ A collection of 10 classic games built with vanilla HTML, CSS, and JavaScript. D
 - Ship placement phase with rotate and random options
 - AI difficulty: Easy (random), Medium (hunt/target), Hard (checkerboard + smart targeting)
 - 2-player mode with device passing
+
+### Minesweeper
+- 3 difficulty levels: Beginner (9x9, 10 mines), Intermediate (16x16, 40 mines), Expert (30x16, 99 mines)
+- First click is always safe (mines placed after first click)
+- Flood-fill reveals connected empty cells
+- Right-click or long-press to flag mines
+- Timer and mine counter display
+- Score based on completion time and difficulty multiplier
+
+### Pai Gow Poker
+- 53-card deck (standard 52 + Joker)
+- Joker completes straights/flushes, otherwise counts as Ace
+- Player sets 7 cards into 5-card high hand and 2-card low hand
+- High hand must rank higher than low hand (no fouling)
+- Win both hands to win, lose both to lose, split is a push
+- House Way button auto-sets hands using optimal strategy
+- Chips persist in localStorage
 
 ## Development
 To test locally:
