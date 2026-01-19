@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Video Poker - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .poker-machine {
+            background: linear-gradient(180deg, #1a1a2e, #16213e);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            border: 3px solid #4a4a6a;
+        }
+
+        .paytable {
+            background: #0a0a1a;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-size: 0.75rem;
+        }
+
+        .paytable table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .paytable th, .paytable td {
+            padding: 4px 8px;
+            text-align: center;
+        }
+
+        .paytable th {
+            color: #ffd700;
+            border-bottom: 1px solid #333;
+        }
+
+        .paytable td {
+            color: #aaa;
+        }
+
+        .paytable tr.highlight td {
+            color: #ffd700;
+            background: rgba(255, 215, 0, 0.1);
+            font-weight: 700;
+        }
+
+        .paytable .hand-name {
+            text-align: left;
+        }
+
+        .paytable .selected {
+            background: rgba(255, 215, 0, 0.2);
+            color: #fff;
+        }
+
+        .cards-display {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .card-slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card {
+            width: 70px;
+            height: 98px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+            border: 3px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card.held {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+            transform: translateY(-10px);
+        }
+
+        .card.facedown {
+            background: linear-gradient(135deg, #c41e3a, #8b0000);
+            border: 3px solid #ffd700;
+        }
+
+        .card.facedown::after {
+            content: '♠♥♦♣';
+            font-size: 1rem;
+            color: #ffd700;
+            letter-spacing: -2px;
+        }
+
+        .card .suit {
+            font-size: 1rem;
+        }
+
+        .card.hearts, .card.diamonds { color: #d32f2f; }
+        .card.clubs, .card.spades { color: #212121; }
+
+        .hold-label {
+            height: 24px;
+            color: #ffd700;
+            font-weight: 700;
+            font-size: 0.9rem;
+            visibility: hidden;
+        }
+
+        .hold-label.visible {
+            visibility: visible;
+        }
+
+        .result-display {
+            text-align: center;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            min-height: 50px;
+        }
+
+        .result-display.win {
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .result-display.lose {
+            color: #888;
+        }
+
+        .controls {
+            background: #2a2a4a;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .credits-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #0a0a1a;
+            border-radius: 8px;
+        }
+
+        .credit-box {
+            text-align: center;
+        }
+
+        .credit-box .label {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .credit-box .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffd700;
+            font-family: monospace;
+        }
+
+        .bet-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .bet-btn {
+            padding: 10px 20px;
+            background: #4a4a6a;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .bet-btn:hover {
+            background: #6a6a8a;
+        }
+
+        .bet-btn.active {
+            background: #ffd700;
+            color: #1a1a2e;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .deal-btn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .deal-btn.deal {
+            background: linear-gradient(180deg, #4caf50, #2e7d32);
+            color: white;
+        }
+
+        .deal-btn.draw {
+            background: linear-gradient(180deg, #ff9800, #f57c00);
+            color: white;
+        }
+
+        .deal-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+
+        .deal-btn:disabled {
+            background: #444;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .instructions {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .instructions h4 {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 500px) {
+            .card {
+                width: 55px;
+                height: 77px;
+                font-size: 1.2rem;
+            }
+            .card .suit { font-size: 0.8rem; }
+            .cards-display { gap: 5px; }
+            .paytable { font-size: 0.65rem; }
+            .paytable th, .paytable td { padding: 2px 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Video Poker</h1>
+            <a href="../index.html" class="back-btn">&#8592; Back to Games</a>
+        </div>
+
+        <div id="game" class="game-container">
+            <div class="poker-machine">
+                <div class="paytable">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="hand-name">Hand</th>
+                                <th>1</th>
+                                <th>2</th>
+                                <th>3</th>
+                                <th>4</th>
+                                <th>5</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paytableBody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="cards-display" id="cardsDisplay">
+                    <div class="card-slot">
+                        <div class="hold-label">HELD</div>
+                        <div class="card facedown"></div>
+                    </div>
+                    <div class="card-slot">
+                        <div class="hold-label">HELD</div>
+                        <div class="card facedown"></div>
+                    </div>
+                    <div class="card-slot">
+                        <div class="hold-label">HELD</div>
+                        <div class="card facedown"></div>
+                    </div>
+                    <div class="card-slot">
+                        <div class="hold-label">HELD</div>
+                        <div class="card facedown"></div>
+                    </div>
+                    <div class="card-slot">
+                        <div class="hold-label">HELD</div>
+                        <div class="card facedown"></div>
+                    </div>
+                </div>
+
+                <div class="result-display" id="resultDisplay"></div>
+
+                <div class="controls">
+                    <div class="credits-display">
+                        <div class="credit-box">
+                            <div class="label">CREDITS</div>
+                            <div class="value" id="credits">100</div>
+                        </div>
+                        <div class="credit-box">
+                            <div class="label">BET</div>
+                            <div class="value" id="currentBet">1</div>
+                        </div>
+                        <div class="credit-box">
+                            <div class="label">WIN</div>
+                            <div class="value" id="lastWin">0</div>
+                        </div>
+                    </div>
+
+                    <div class="bet-controls" id="betControls">
+                        <button class="bet-btn active" data-bet="1">Bet 1</button>
+                        <button class="bet-btn" data-bet="2">Bet 2</button>
+                        <button class="bet-btn" data-bet="3">Bet 3</button>
+                        <button class="bet-btn" data-bet="4">Bet 4</button>
+                        <button class="bet-btn" data-bet="5">Bet Max</button>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="deal-btn deal" id="dealBtn" onclick="dealOrDraw()">DEAL</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <h4>How to Play - Jacks or Better</h4>
+                <ul>
+                    <li>Select your bet amount (1-5 credits)</li>
+                    <li>Click <strong>DEAL</strong> to receive 5 cards</li>
+                    <li>Click cards you want to <strong>HOLD</strong></li>
+                    <li>Click <strong>DRAW</strong> to replace non-held cards</li>
+                    <li>Win with a pair of Jacks or better!</li>
+                    <li><strong>Bet 5</strong> for bonus Royal Flush payout (800 instead of 250)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <h3 style="margin-bottom: 15px;">Statistics</h3>
+            <div id="stats"></div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        // Card constants
+        const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'];
+        const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        const SUIT_SYMBOLS = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' };
+
+        // Paytable (Jacks or Better - 9/6 full pay)
+        const PAYTABLE = [
+            { name: 'Royal Flush', pays: [250, 500, 750, 1000, 4000] },
+            { name: 'Straight Flush', pays: [50, 100, 150, 200, 250] },
+            { name: 'Four of a Kind', pays: [25, 50, 75, 100, 125] },
+            { name: 'Full House', pays: [9, 18, 27, 36, 45] },
+            { name: 'Flush', pays: [6, 12, 18, 24, 30] },
+            { name: 'Straight', pays: [4, 8, 12, 16, 20] },
+            { name: 'Three of a Kind', pays: [3, 6, 9, 12, 15] },
+            { name: 'Two Pair', pays: [2, 4, 6, 8, 10] },
+            { name: 'Jacks or Better', pays: [1, 2, 3, 4, 5] }
+        ];
+
+        // Game state
+        let deck = [];
+        let hand = [];
+        let held = [false, false, false, false, false];
+        let credits = parseInt(localStorage.getItem('videoPokerCredits')) || 100;
+        let currentBet = 1;
+        let gamePhase = 'betting'; // betting, holding, complete
+        let lastWin = 0;
+
+        function init() {
+            renderPaytable();
+            updateDisplay();
+
+            document.querySelectorAll('.bet-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (gamePhase !== 'betting') return;
+                    currentBet = parseInt(btn.dataset.bet);
+                    document.querySelectorAll('.bet-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    updatePaytableHighlight();
+                    document.getElementById('currentBet').textContent = currentBet;
+                });
+            });
+
+            GameUtils.renderStats('videopoker', 'stats');
+        }
+
+        function renderPaytable() {
+            const tbody = document.getElementById('paytableBody');
+            tbody.innerHTML = PAYTABLE.map((hand, index) => `
+                <tr data-hand="${index}">
+                    <td class="hand-name">${hand.name}</td>
+                    ${hand.pays.map((pay, i) => `<td class="${i === 0 ? 'selected' : ''}">${pay}</td>`).join('')}
+                </tr>
+            `).join('');
+            updatePaytableHighlight();
+        }
+
+        function updatePaytableHighlight() {
+            document.querySelectorAll('.paytable td').forEach(td => td.classList.remove('selected'));
+            document.querySelectorAll('.paytable tbody tr').forEach(tr => {
+                const cells = tr.querySelectorAll('td');
+                if (cells[currentBet]) {
+                    cells[currentBet].classList.add('selected');
+                }
+            });
+        }
+
+        function createDeck() {
+            const deck = [];
+            for (const suit of SUITS) {
+                for (const rank of RANKS) {
+                    deck.push({ rank, suit });
+                }
+            }
+            return GameUtils.shuffleArray(deck);
+        }
+
+        function dealOrDraw() {
+            if (gamePhase === 'betting') {
+                deal();
+            } else if (gamePhase === 'holding') {
+                draw();
+            }
+        }
+
+        function deal() {
+            if (credits < currentBet) {
+                GameUtils.showModal('Not Enough Credits', `You need ${currentBet} credits to play. You have ${credits}.`, [
+                    { text: 'OK', primary: true }
+                ]);
+                return;
+            }
+
+            credits -= currentBet;
+            lastWin = 0;
+            deck = createDeck();
+            hand = deck.splice(0, 5);
+            held = [false, false, false, false, false];
+            gamePhase = 'holding';
+
+            document.getElementById('resultDisplay').textContent = '';
+            document.getElementById('resultDisplay').className = 'result-display';
+            document.getElementById('dealBtn').textContent = 'DRAW';
+            document.getElementById('dealBtn').className = 'deal-btn draw';
+            document.getElementById('betControls').style.opacity = '0.5';
+            document.getElementById('betControls').style.pointerEvents = 'none';
+
+            // Clear paytable highlight for winning hand
+            document.querySelectorAll('.paytable tr').forEach(tr => tr.classList.remove('highlight'));
+
+            renderCards();
+            updateDisplay();
+        }
+
+        function draw() {
+            // Replace non-held cards
+            for (let i = 0; i < 5; i++) {
+                if (!held[i]) {
+                    hand[i] = deck.pop();
+                }
+            }
+
+            gamePhase = 'complete';
+            renderCards();
+            evaluateAndPay();
+
+            document.getElementById('dealBtn').textContent = 'DEAL';
+            document.getElementById('dealBtn').className = 'deal-btn deal';
+            document.getElementById('betControls').style.opacity = '1';
+            document.getElementById('betControls').style.pointerEvents = 'auto';
+
+            // Reset for next hand after short delay
+            setTimeout(() => {
+                gamePhase = 'betting';
+                if (credits <= 0) {
+                    GameUtils.showModal('Out of Credits!', 'Here\'s 100 credits to keep playing!', [
+                        { text: 'Thanks!', primary: true, action: () => {
+                            credits = 100;
+                            updateDisplay();
+                        }}
+                    ]);
+                }
+            }, 500);
+        }
+
+        function toggleHold(index) {
+            if (gamePhase !== 'holding') return;
+            held[index] = !held[index];
+            renderCards();
+        }
+
+        function renderCards() {
+            const display = document.getElementById('cardsDisplay');
+            display.innerHTML = hand.map((card, i) => `
+                <div class="card-slot">
+                    <div class="hold-label ${held[i] ? 'visible' : ''}">HELD</div>
+                    <div class="card ${card.suit} ${held[i] ? 'held' : ''}" onclick="toggleHold(${i})">
+                        <span>${card.rank}</span>
+                        <span class="suit">${SUIT_SYMBOLS[card.suit]}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function evaluateAndPay() {
+            const result = evaluateHand(hand);
+            const resultDisplay = document.getElementById('resultDisplay');
+
+            // Clear all highlights first
+            document.querySelectorAll('.paytable tr').forEach(tr => tr.classList.remove('highlight'));
+
+            if (result.handIndex >= 0) {
+                const payout = PAYTABLE[result.handIndex].pays[currentBet - 1];
+                credits += payout;
+                lastWin = payout;
+
+                resultDisplay.textContent = `${result.name} - WIN ${payout}!`;
+                resultDisplay.className = 'result-display win';
+
+                // Highlight winning hand in paytable
+                const row = document.querySelector(`.paytable tr[data-hand="${result.handIndex}"]`);
+                if (row) row.classList.add('highlight');
+
+                GameUtils.stats.update('videopoker', 'win');
+
+                // Add high score for big wins
+                if (payout >= 25) {
+                    const playerName = GameUtils.playerName.get(1);
+                    GameUtils.highScores.add('videopoker', playerName, payout, {
+                        hand: result.name,
+                        bet: currentBet
+                    });
+                }
+            } else {
+                resultDisplay.textContent = 'No Win';
+                resultDisplay.className = 'result-display lose';
+                GameUtils.stats.update('videopoker', 'loss');
+            }
+
+            updateDisplay();
+            GameUtils.renderStats('videopoker', 'stats');
+        }
+
+        function evaluateHand(cards) {
+            const values = cards.map(c => getCardValue(c)).sort((a, b) => a - b);
+            const suits = cards.map(c => c.suit);
+
+            const isFlush = suits.every(s => s === suits[0]);
+            const isStraight = checkStraight(values);
+            const counts = getCounts(values);
+
+            // Royal Flush
+            if (isFlush && isStraight && values[4] === 14 && values[0] === 10) {
+                return { handIndex: 0, name: 'Royal Flush' };
+            }
+
+            // Straight Flush
+            if (isFlush && isStraight) {
+                return { handIndex: 1, name: 'Straight Flush' };
+            }
+
+            // Four of a Kind
+            if (counts[0].count === 4) {
+                return { handIndex: 2, name: 'Four of a Kind' };
+            }
+
+            // Full House
+            if (counts[0].count === 3 && counts[1].count === 2) {
+                return { handIndex: 3, name: 'Full House' };
+            }
+
+            // Flush
+            if (isFlush) {
+                return { handIndex: 4, name: 'Flush' };
+            }
+
+            // Straight
+            if (isStraight) {
+                return { handIndex: 5, name: 'Straight' };
+            }
+
+            // Three of a Kind
+            if (counts[0].count === 3) {
+                return { handIndex: 6, name: 'Three of a Kind' };
+            }
+
+            // Two Pair
+            if (counts[0].count === 2 && counts[1].count === 2) {
+                return { handIndex: 7, name: 'Two Pair' };
+            }
+
+            // Jacks or Better
+            if (counts[0].count === 2 && counts[0].value >= 11) {
+                return { handIndex: 8, name: 'Jacks or Better' };
+            }
+
+            return { handIndex: -1, name: 'No Win' };
+        }
+
+        function getCardValue(card) {
+            const values = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+            return values[card.rank];
+        }
+
+        function checkStraight(values) {
+            // Check regular straight
+            let isRegular = true;
+            for (let i = 0; i < values.length - 1; i++) {
+                if (values[i + 1] - values[i] !== 1) {
+                    isRegular = false;
+                    break;
+                }
+            }
+            if (isRegular) return true;
+
+            // Check wheel (A-2-3-4-5)
+            if (values[0] === 2 && values[1] === 3 && values[2] === 4 && values[3] === 5 && values[4] === 14) {
+                return true;
+            }
+
+            return false;
+        }
+
+        function getCounts(values) {
+            const countMap = {};
+            values.forEach(v => {
+                countMap[v] = (countMap[v] || 0) + 1;
+            });
+
+            return Object.entries(countMap)
+                .map(([value, count]) => ({ value: parseInt(value), count }))
+                .sort((a, b) => b.count - a.count || b.value - a.value);
+        }
+
+        function updateDisplay() {
+            document.getElementById('credits').textContent = credits;
+            document.getElementById('lastWin').textContent = lastWin;
+            localStorage.setItem('videoPokerCredits', credits);
+        }
+
+        init();
+    </script>
+</body>
+</html>

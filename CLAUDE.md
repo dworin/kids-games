@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 12 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 13 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
@@ -20,7 +20,8 @@ A collection of 12 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── rushhour.html   # Sliding block puzzle, 20 levels
     ├── battleship.html # Naval combat with ship placement
     ├── minesweeper.html # Classic mine-clearing puzzle
-    └── paigowpoker.html # Casino card game with hand setting
+    ├── paigowpoker.html # Casino card game with hand setting
+    └── videopoker.html  # Jacks or Better draw poker
 ```
 
 ## Key Features
@@ -84,6 +85,14 @@ A collection of 12 classic games built with vanilla HTML, CSS, and JavaScript. D
 - Win both hands to win, lose both to lose, split is a push
 - House Way button auto-sets hands using optimal strategy
 - Chips persist in localStorage
+
+### Video Poker
+- Jacks or Better variant (9/6 full pay)
+- 52-card deck, 5-card draw poker
+- Click cards to hold, then draw to replace others
+- Minimum winning hand: pair of Jacks or higher
+- Bet 1-5 credits; max bet gives Royal Flush bonus (4000 vs 1250)
+- Credits persist in localStorage
 
 ## Development
 To test locally:
