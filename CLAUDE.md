@@ -60,3 +60,23 @@ python3 -m http.server 5678
 
 ## Deployment
 Hosted on GitHub Pages: https://dworin.github.io/kids-games/
+
+Repository: https://github.com/dworin/kids-games
+
+## Bug Fixes Applied
+1. **Tic Tac Toe AI not moving**: The `makeMove()` guard clause blocked AI moves. Fixed by adding `isAI` parameter to bypass the check when AI calls it.
+
+2. **Checkers backward jumps**: Non-king pieces could jump backwards (bug). Removed erroneous code block that added backward jumps for regular pieces.
+
+3. **Checkers mobile zoom**: King promotion triggered zoom on mobile. Fixed with:
+   - Viewport meta: `maximum-scale=1.0, user-scalable=no`
+   - CSS: `touch-action: manipulation` on board/cells
+   - `-webkit-text-size-adjust: 100%` on body
+
+4. **Checkers king symbol**: Unicode `\u265A` didn't render on mobile (showed "u265A"). Changed to `★` star character.
+
+## Known Considerations
+- Chess AI is heuristic-based (not deep search) - evaluates captures, center control, development
+- Mancala AI prioritizes: extra turns > captures > most stones
+- All game state stored in localStorage - clearing browser data resets scores
+- Mobile-first testing recommended for UI changes
