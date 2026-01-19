@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Arcade - Classic Games Collection</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header class="header">
+        <h1>Game Arcade</h1>
+        <p>Classic games collection - Play solo against the computer or with a friend!</p>
+    </header>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" data-tab="games">Games</button>
+            <button class="tab" data-tab="stats">Statistics</button>
+            <button class="tab" data-tab="settings">Settings</button>
+        </div>
+
+        <div id="games" class="tab-content active">
+            <div class="game-grid">
+                <a href="games/tictactoe.html" class="game-card">
+                    <span class="icon">#</span>
+                    <h2>Tic Tac Toe</h2>
+                    <p>The classic X's and O's game. Get three in a row to win!</p>
+                </a>
+
+                <a href="games/mancala.html" class="game-card">
+                    <span class="icon">&#9898;</span>
+                    <h2>Mancala</h2>
+                    <p>Ancient strategy game. Capture the most stones to win!</p>
+                </a>
+
+                <a href="games/blackjack.html" class="game-card">
+                    <span class="icon">&#9824;</span>
+                    <h2>Blackjack</h2>
+                    <p>Try to get 21 without going bust. Beat the dealer!</p>
+                </a>
+
+                <a href="games/war.html" class="game-card">
+                    <span class="icon">&#9829;</span>
+                    <h2>War</h2>
+                    <p>Classic card battle game. Win all the cards!</p>
+                </a>
+
+                <a href="games/hangman.html" class="game-card">
+                    <span class="icon">&#128100;</span>
+                    <h2>Hangman</h2>
+                    <p>Guess the word letter by letter before time runs out!</p>
+                </a>
+
+                <a href="games/memory.html" class="game-card">
+                    <span class="icon">&#128064;</span>
+                    <h2>Memory Snap</h2>
+                    <p>Match pairs of cards. Test your memory!</p>
+                </a>
+
+                <a href="games/checkers.html" class="game-card">
+                    <span class="icon">&#9899;</span>
+                    <h2>Checkers</h2>
+                    <p>Jump and capture your opponent's pieces. King me!</p>
+                </a>
+
+                <a href="games/chess.html" class="game-card">
+                    <span class="icon">&#9812;</span>
+                    <h2>Chess</h2>
+                    <p>The ultimate strategy game. Checkmate your opponent!</p>
+                </a>
+            </div>
+        </div>
+
+        <div id="stats" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Your Statistics</h2>
+            <div id="all-stats"></div>
+        </div>
+
+        <div id="settings" class="tab-content">
+            <div class="game-container">
+                <h2 style="margin-bottom: 20px;">Settings</h2>
+
+                <div class="form-group">
+                    <label for="player1Name">Player 1 Name</label>
+                    <input type="text" id="player1Name" placeholder="Enter name...">
+                </div>
+
+                <div class="form-group">
+                    <label for="player2Name">Player 2 Name</label>
+                    <input type="text" id="player2Name" placeholder="Enter name...">
+                </div>
+
+                <div class="btn-group" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="saveSettings()">Save Settings</button>
+                    <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/utils.js"></script>
+    <script>
+        // Tab navigation
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+
+                if (tab.dataset.tab === 'stats') {
+                    loadAllStats();
+                }
+            });
+        });
+
+        // Load player names
+        document.getElementById('player1Name').value = GameUtils.playerName.get(1);
+        document.getElementById('player2Name').value = GameUtils.playerName.get(2);
+
+        // Save settings
+        function saveSettings() {
+            GameUtils.playerName.set(document.getElementById('player1Name').value || 'Player 1', 1);
+            GameUtils.playerName.set(document.getElementById('player2Name').value || 'Player 2', 2);
+            GameUtils.showModal('Settings Saved', 'Your settings have been saved successfully!', [
+                { text: 'OK', primary: true }
+            ]);
+        }
+
+        // Clear all data
+        function clearAllData() {
+            GameUtils.showModal(
+                'Clear All Data?',
+                'This will delete all high scores and statistics. This action cannot be undone.',
+                [
+                    { text: 'Cancel' },
+                    {
+                        text: 'Clear All',
+                        primary: true,
+                        action: () => {
+                            GameUtils.highScores.clear();
+                            GameUtils.stats.clear();
+                            loadAllStats();
+                            GameUtils.showModal('Data Cleared', 'All data has been cleared.', [
+                                { text: 'OK', primary: true }
+                            ]);
+                        }
+                    }
+                ]
+            );
+        }
+
+        // Load all stats
+        function loadAllStats() {
+            const container = document.getElementById('all-stats');
+            const allStats = GameUtils.stats.getAll ?
+                (function() {
+                    const stats = JSON.parse(localStorage.getItem('gameStats') || '{}');
+                    return stats;
+                })() : {};
+
+            const allScores = GameUtils.highScores.getAll();
+
+            const games = [
+                { id: 'tictactoe', name: 'Tic Tac Toe' },
+                { id: 'mancala', name: 'Mancala' },
+                { id: 'blackjack', name: 'Blackjack' },
+                { id: 'war', name: 'War' },
+                { id: 'hangman', name: 'Hangman' },
+                { id: 'memory', name: 'Memory Snap' },
+                { id: 'checkers', name: 'Checkers' },
+                { id: 'chess', name: 'Chess' }
+            ];
+
+            let html = '';
+            games.forEach(game => {
+                const stats = allStats[game.id] || { played: 0, won: 0, lost: 0, draws: 0 };
+                const scores = allScores[game.id] || [];
+                const winRate = stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0;
+
+                html += `
+                    <div class="game-container" style="margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px;">${game.name}</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-value">${stats.played}</span>
+                                <span class="stat-label">Played</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${stats.won}</span>
+                                <span class="stat-label">Won</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${stats.lost}</span>
+                                <span class="stat-label">Lost</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${stats.draws}</span>
+                                <span class="stat-label">Draws</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">${winRate}%</span>
+                                <span class="stat-label">Win Rate</span>
+                            </div>
+                        </div>
+                        ${scores.length > 0 ? `
+                            <h4 style="margin: 15px 0 10px;">High Scores</h4>
+                            <table class="high-scores-table">
+                                <thead><tr><th>#</th><th>Player</th><th>Score</th><th>Date</th></tr></thead>
+                                <tbody>
+                                    ${scores.slice(0, 5).map((score, i) => `
+                                        <tr>
+                                            <td>${i + 1}</td>
+                                            <td>${GameUtils.escapeHtml(score.player)}</td>
+                                            <td>${score.score}</td>
+                                            <td>${new Date(score.date).toLocaleDateString()}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html || '<p class="no-scores">No statistics yet. Play some games!</p>';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>War - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .war-table {
+            background: linear-gradient(135deg, #065f46, #047857);
+            border-radius: 20px;
+            padding: 30px;
+            margin: 20px auto;
+            max-width: 700px;
+        }
+        .battle-area {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            min-height: 200px;
+            gap: 20px;
+        }
+        .player-side {
+            text-align: center;
+            flex: 1;
+        }
+        .player-name {
+            font-weight: 700;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .deck-count {
+            background: rgba(0,0,0,0.3);
+            padding: 5px 15px;
+            border-radius: 15px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        .played-card {
+            width: 90px;
+            height: 130px;
+            background: white;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            box-shadow: 2px 4px 10px rgba(0,0,0,0.4);
+            margin: 10px auto;
+            transition: transform 0.3s;
+        }
+        .played-card.red { color: #dc2626; }
+        .played-card.black { color: #1e293b; }
+        .played-card.face-down {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: transparent;
+        }
+        .played-card.face-down::after {
+            content: '';
+            position: absolute;
+            inset: 8px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 7px;
+        }
+        .card-value { font-size: 1.8rem; }
+        .card-suit { font-size: 2.2rem; }
+        .vs-indicator {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .war-cards {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .war-card-mini {
+            width: 50px;
+            height: 70px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 6px;
+            box-shadow: 1px 2px 4px rgba(0,0,0,0.3);
+        }
+        .result-banner {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+        .result-banner.p1 { background: rgba(59, 130, 246, 0.3); color: #3b82f6; }
+        .result-banner.p2 { background: rgba(239, 68, 68, 0.3); color: #ef4444; }
+        .result-banner.war { background: rgba(251, 191, 36, 0.3); color: #fbbf24; }
+        .speed-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        .speed-btn {
+            padding: 8px 20px;
+            border: 1px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .speed-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>War</h1>
+            <a href="../index.html" class="back-btn">&#8592; Back to Games</a>
+        </div>
+
+        <div id="setup" class="game-container">
+            <h2 style="text-align: center; margin-bottom: 20px;">War - Card Game</h2>
+
+            <div class="mode-selection">
+                <button class="mode-btn active" data-mode="ai">vs Computer</button>
+                <button class="mode-btn" data-mode="pvp">2 Players</button>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: var(--dark-bg); border-radius: 10px;">
+                <h4 style="margin-bottom: 10px;">How to Play:</h4>
+                <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
+                    <li>Each player flips their top card</li>
+                    <li>Higher card wins both cards</li>
+                    <li>On a tie, it's WAR! Each player places 3 cards face-down, then flips one more</li>
+                    <li>Winner of the war takes all cards</li>
+                    <li>Game ends when one player has all 52 cards</li>
+                </ul>
+            </div>
+
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn btn-success" onclick="startGame()">Start Game</button>
+            </div>
+        </div>
+
+        <div id="game" class="game-container" style="display: none;">
+            <div class="score-display">
+                <div class="score-item">
+                    <span class="label" id="player1Label">Player 1</span>
+                    <span class="value" id="deck1">26</span>
+                </div>
+                <div class="score-item">
+                    <span class="label">Battles</span>
+                    <span class="value" id="battles">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="label" id="player2Label">Player 2</span>
+                    <span class="value" id="deck2">26</span>
+                </div>
+            </div>
+
+            <div class="war-table">
+                <div class="battle-area">
+                    <div class="player-side" id="p1Side">
+                        <div class="player-name" id="p1Name">Player 1</div>
+                        <div id="p1Card"></div>
+                        <div id="p1WarCards"></div>
+                    </div>
+
+                    <div class="vs-indicator">VS</div>
+
+                    <div class="player-side" id="p2Side">
+                        <div class="player-name" id="p2Name">Player 2</div>
+                        <div id="p2Card"></div>
+                        <div id="p2WarCards"></div>
+                    </div>
+                </div>
+
+                <div id="resultArea"></div>
+            </div>
+
+            <div class="speed-controls">
+                <span style="color: var(--text-secondary); margin-right: 10px;">Speed:</span>
+                <button class="speed-btn" data-speed="slow">Slow</button>
+                <button class="speed-btn active" data-speed="normal">Normal</button>
+                <button class="speed-btn" data-speed="fast">Fast</button>
+                <button class="speed-btn" data-speed="instant">Instant</button>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-success" id="playBtn" onclick="playRound()">Draw Cards</button>
+                <button class="btn" id="autoBtn" onclick="toggleAuto()">Auto Play</button>
+                <button class="btn btn-secondary" onclick="backToSetup()">New Game</button>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <h3 style="margin-bottom: 15px;">Statistics</h3>
+            <div id="stats"></div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        // Game state
+        let player1Deck = [];
+        let player2Deck = [];
+        let gameMode = 'ai';
+        let gameActive = false;
+        let autoPlay = false;
+        let battles = 0;
+        let speed = 'normal';
+        let player1Name, player2Name;
+
+        const speeds = { slow: 1500, normal: 800, fast: 300, instant: 50 };
+        const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        const symbols = { hearts: '\u2665', diamonds: '\u2666', clubs: '\u2663', spades: '\u2660' };
+
+        function init() {
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    gameMode = btn.dataset.mode;
+                });
+            });
+
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    speed = btn.dataset.speed;
+                });
+            });
+
+            GameUtils.renderStats('war', 'stats');
+        }
+
+        function createDeck() {
+            const deck = [];
+            for (const suit of suits) {
+                for (const value of values) {
+                    deck.push({ suit, value });
+                }
+            }
+            return GameUtils.shuffleArray(deck);
+        }
+
+        function getCardValue(card) {
+            return values.indexOf(card.value);
+        }
+
+        function renderCard(card, faceDown = false) {
+            if (!card) return '';
+            if (faceDown) {
+                return `<div class="played-card face-down"></div>`;
+            }
+            const isRed = card.suit === 'hearts' || card.suit === 'diamonds';
+            return `
+                <div class="played-card ${isRed ? 'red' : 'black'}">
+                    <span class="card-value">${card.value}</span>
+                    <span class="card-suit">${symbols[card.suit]}</span>
+                </div>
+            `;
+        }
+
+        function startGame() {
+            player1Name = GameUtils.playerName.get(1);
+            player2Name = gameMode === 'ai' ? 'Computer' : GameUtils.playerName.get(2);
+
+            document.getElementById('player1Label').textContent = player1Name;
+            document.getElementById('player2Label').textContent = player2Name;
+            document.getElementById('p1Name').textContent = player1Name;
+            document.getElementById('p2Name').textContent = player2Name;
+
+            const deck = createDeck();
+            player1Deck = deck.slice(0, 26);
+            player2Deck = deck.slice(26);
+
+            battles = 0;
+            gameActive = true;
+            autoPlay = false;
+
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+
+            updateDisplay();
+            clearBattleArea();
+        }
+
+        function backToSetup() {
+            autoPlay = false;
+            document.getElementById('setup').style.display = 'block';
+            document.getElementById('game').style.display = 'none';
+        }
+
+        function updateDisplay() {
+            document.getElementById('deck1').textContent = player1Deck.length;
+            document.getElementById('deck2').textContent = player2Deck.length;
+            document.getElementById('battles').textContent = battles;
+        }
+
+        function clearBattleArea() {
+            document.getElementById('p1Card').innerHTML = '';
+            document.getElementById('p2Card').innerHTML = '';
+            document.getElementById('p1WarCards').innerHTML = '';
+            document.getElementById('p2WarCards').innerHTML = '';
+            document.getElementById('resultArea').innerHTML = '';
+        }
+
+        async function playRound() {
+            if (!gameActive || player1Deck.length === 0 || player2Deck.length === 0) return;
+
+            document.getElementById('playBtn').disabled = true;
+            clearBattleArea();
+
+            const pot = [];
+            await battle(pot);
+
+            document.getElementById('playBtn').disabled = false;
+
+            if (autoPlay && gameActive) {
+                setTimeout(playRound, speeds[speed]);
+            }
+        }
+
+        async function battle(pot) {
+            if (player1Deck.length === 0 || player2Deck.length === 0) {
+                endGame();
+                return;
+            }
+
+            const card1 = player1Deck.shift();
+            const card2 = player2Deck.shift();
+            pot.push(card1, card2);
+            battles++;
+
+            document.getElementById('p1Card').innerHTML = renderCard(card1);
+            document.getElementById('p2Card').innerHTML = renderCard(card2);
+            updateDisplay();
+
+            await GameUtils.delay(speeds[speed]);
+
+            const val1 = getCardValue(card1);
+            const val2 = getCardValue(card2);
+
+            if (val1 > val2) {
+                // Player 1 wins
+                document.getElementById('resultArea').innerHTML =
+                    `<div class="result-banner p1">${player1Name} wins the battle!</div>`;
+                player1Deck.push(...GameUtils.shuffleArray(pot));
+            } else if (val2 > val1) {
+                // Player 2 wins
+                document.getElementById('resultArea').innerHTML =
+                    `<div class="result-banner p2">${player2Name} wins the battle!</div>`;
+                player2Deck.push(...GameUtils.shuffleArray(pot));
+            } else {
+                // War!
+                document.getElementById('resultArea').innerHTML =
+                    `<div class="result-banner war">WAR!</div>`;
+
+                await GameUtils.delay(speeds[speed]);
+
+                // Put 3 cards face down (or as many as available)
+                const warCards1 = [];
+                const warCards2 = [];
+
+                for (let i = 0; i < 3; i++) {
+                    if (player1Deck.length > 0) {
+                        warCards1.push(player1Deck.shift());
+                    }
+                    if (player2Deck.length > 0) {
+                        warCards2.push(player2Deck.shift());
+                    }
+                }
+
+                pot.push(...warCards1, ...warCards2);
+
+                // Show face-down cards
+                document.getElementById('p1WarCards').innerHTML =
+                    `<div class="war-cards">${warCards1.map(() => '<div class="war-card-mini"></div>').join('')}</div>`;
+                document.getElementById('p2WarCards').innerHTML =
+                    `<div class="war-cards">${warCards2.map(() => '<div class="war-card-mini"></div>').join('')}</div>`;
+
+                updateDisplay();
+                await GameUtils.delay(speeds[speed]);
+
+                // Continue the battle
+                await battle(pot);
+            }
+
+            updateDisplay();
+            checkGameEnd();
+        }
+
+        function checkGameEnd() {
+            if (player1Deck.length === 0 || player2Deck.length === 0) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            autoPlay = false;
+            document.getElementById('autoBtn').textContent = 'Auto Play';
+
+            const winner = player1Deck.length > 0 ? player1Name : player2Name;
+            const isP1Winner = player1Deck.length > 0;
+
+            document.getElementById('resultArea').innerHTML =
+                `<div class="result-banner ${isP1Winner ? 'p1' : 'p2'}">${winner} wins the war!</div>`;
+
+            // Update stats
+            if (gameMode === 'ai') {
+                GameUtils.stats.update('war', isP1Winner ? 'win' : 'loss');
+                if (isP1Winner) {
+                    GameUtils.highScores.add('war', player1Name, battles, { rounds: battles });
+                }
+            } else {
+                GameUtils.stats.update('war', 'win');
+            }
+
+            GameUtils.renderStats('war', 'stats');
+        }
+
+        function toggleAuto() {
+            autoPlay = !autoPlay;
+            document.getElementById('autoBtn').textContent = autoPlay ? 'Stop Auto' : 'Auto Play';
+
+            if (autoPlay && gameActive) {
+                playRound();
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

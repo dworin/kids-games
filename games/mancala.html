@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mancala - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Mancala</h1>
+            <a href="../index.html" class="back-btn">&#8592; Back to Games</a>
+        </div>
+
+        <div id="setup" class="game-container">
+            <h2 style="text-align: center; margin-bottom: 20px;">Select Game Mode</h2>
+
+            <div class="mode-selection">
+                <button class="mode-btn active" data-mode="ai">vs Computer</button>
+                <button class="mode-btn" data-mode="pvp">2 Players</button>
+            </div>
+
+            <div id="difficulty-section" class="difficulty-selection">
+                <button class="difficulty-btn" data-difficulty="easy">Easy</button>
+                <button class="difficulty-btn active" data-difficulty="medium">Medium</button>
+                <button class="difficulty-btn" data-difficulty="hard">Hard</button>
+            </div>
+
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn btn-success" onclick="startGame()">Start Game</button>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: var(--dark-bg); border-radius: 10px;">
+                <h4 style="margin-bottom: 10px;">How to Play:</h4>
+                <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
+                    <li>Click a pit on your side to pick up all stones</li>
+                    <li>Stones are distributed counter-clockwise, one per pit</li>
+                    <li>If your last stone lands in your store, you go again</li>
+                    <li>If your last stone lands in an empty pit on your side, capture that stone and all stones in the opposite pit</li>
+                    <li>Game ends when one side is empty - remaining stones go to that player's opponent</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="game" class="game-container" style="display: none;">
+            <div class="game-status" id="status">Player 1's turn</div>
+
+            <div class="mancala-board" id="board">
+                <div class="mancala-store" id="store2">0</div>
+                <div class="mancala-pits">
+                    <div class="mancala-row" id="row2"></div>
+                    <div class="mancala-row" id="row1"></div>
+                </div>
+                <div class="mancala-store" id="store1">0</div>
+            </div>
+
+            <div class="score-display">
+                <div class="score-item">
+                    <span class="label" id="player1Label">Player 1</span>
+                    <span class="value" id="score1">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="label" id="player2Label">Player 2</span>
+                    <span class="value" id="score2">0</span>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn" onclick="resetGame()">New Game</button>
+                <button class="btn btn-secondary" onclick="backToSetup()">Change Mode</button>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <h3 style="margin-bottom: 15px;">Statistics</h3>
+            <div id="stats"></div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        // Game state
+        // Board layout: pits[0-5] = Player 1's pits, pits[6] = Player 1's store
+        //               pits[7-12] = Player 2's pits, pits[13] = Player 2's store
+        let pits = [];
+        let currentPlayer = 1;
+        let gameActive = false;
+        let gameMode = 'ai';
+        let difficulty = 'medium';
+        let player1Name, player2Name;
+        let isAnimating = false;
+
+        function init() {
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    gameMode = btn.dataset.mode;
+                    document.getElementById('difficulty-section').style.display =
+                        gameMode === 'ai' ? 'flex' : 'none';
+                });
+            });
+
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    difficulty = btn.dataset.difficulty;
+                });
+            });
+
+            GameUtils.renderStats('mancala', 'stats');
+        }
+
+        function startGame() {
+            player1Name = GameUtils.playerName.get(1);
+            player2Name = gameMode === 'ai' ? 'Computer' : GameUtils.playerName.get(2);
+
+            document.getElementById('player1Label').textContent = player1Name;
+            document.getElementById('player2Label').textContent = player2Name;
+
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+
+            resetGame();
+        }
+
+        function backToSetup() {
+            document.getElementById('setup').style.display = 'block';
+            document.getElementById('game').style.display = 'none';
+        }
+
+        function resetGame() {
+            // Initialize with 4 stones in each pit
+            pits = [4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4, 0];
+            currentPlayer = 1;
+            gameActive = true;
+            isAnimating = false;
+            renderBoard();
+            updateStatus();
+        }
+
+        function renderBoard() {
+            const row1 = document.getElementById('row1');
+            const row2 = document.getElementById('row2');
+
+            row1.innerHTML = '';
+            row2.innerHTML = '';
+
+            // Player 1's pits (bottom row, left to right: 0-5)
+            for (let i = 0; i < 6; i++) {
+                const pit = createPit(i, pits[i], 1);
+                row1.appendChild(pit);
+            }
+
+            // Player 2's pits (top row, right to left: 12-7)
+            for (let i = 12; i >= 7; i--) {
+                const pit = createPit(i, pits[i], 2);
+                row2.appendChild(pit);
+            }
+
+            // Stores
+            document.getElementById('store1').textContent = pits[6];
+            document.getElementById('store2').textContent = pits[13];
+
+            // Update scores
+            document.getElementById('score1').textContent = pits[6];
+            document.getElementById('score2').textContent = pits[13];
+        }
+
+        function createPit(index, stones, player) {
+            const pit = document.createElement('button');
+            pit.className = 'mancala-pit';
+            pit.textContent = stones;
+            pit.dataset.index = index;
+
+            const isCurrentPlayerPit = (player === 1 && index <= 5) || (player === 2 && index >= 7 && index <= 12);
+            const canClick = gameActive && !isAnimating &&
+                ((currentPlayer === 1 && index <= 5) || (currentPlayer === 2 && index >= 7 && index <= 12)) &&
+                stones > 0;
+
+            if (!canClick) {
+                pit.disabled = true;
+            } else {
+                pit.addEventListener('click', () => makeMove(index));
+            }
+
+            if (currentPlayer === player && isCurrentPlayerPit && stones > 0) {
+                pit.classList.add('highlight');
+            }
+
+            return pit;
+        }
+
+        async function makeMove(pitIndex) {
+            if (!gameActive || isAnimating) return;
+            if (pits[pitIndex] === 0) return;
+
+            // Validate it's the current player's pit
+            if (currentPlayer === 1 && pitIndex > 5) return;
+            if (currentPlayer === 2 && (pitIndex < 7 || pitIndex > 12)) return;
+
+            isAnimating = true;
+
+            let stones = pits[pitIndex];
+            pits[pitIndex] = 0;
+            let currentIndex = pitIndex;
+            const opponentStore = currentPlayer === 1 ? 13 : 6;
+
+            // Distribute stones
+            while (stones > 0) {
+                currentIndex = (currentIndex + 1) % 14;
+
+                // Skip opponent's store
+                if (currentIndex === opponentStore) continue;
+
+                pits[currentIndex]++;
+                stones--;
+
+                renderBoard();
+                await GameUtils.delay(150);
+            }
+
+            // Check for capture
+            const ownStore = currentPlayer === 1 ? 6 : 13;
+            const ownPitsStart = currentPlayer === 1 ? 0 : 7;
+            const ownPitsEnd = currentPlayer === 1 ? 5 : 12;
+
+            if (currentIndex >= ownPitsStart && currentIndex <= ownPitsEnd && pits[currentIndex] === 1) {
+                // Landed in own empty pit - capture!
+                const oppositeIndex = 12 - currentIndex;
+                if (pits[oppositeIndex] > 0) {
+                    pits[ownStore] += pits[currentIndex] + pits[oppositeIndex];
+                    pits[currentIndex] = 0;
+                    pits[oppositeIndex] = 0;
+                    renderBoard();
+                    await GameUtils.delay(300);
+                }
+            }
+
+            // Check if game is over
+            if (isGameOver()) {
+                endGame();
+                isAnimating = false;
+                return;
+            }
+
+            // Check if player gets another turn (landed in own store)
+            if (currentIndex !== ownStore) {
+                currentPlayer = currentPlayer === 1 ? 2 : 1;
+            }
+
+            isAnimating = false;
+            renderBoard();
+            updateStatus();
+
+            // AI move
+            if (gameMode === 'ai' && currentPlayer === 2 && gameActive) {
+                await GameUtils.delay(500);
+                aiMove();
+            }
+        }
+
+        function isGameOver() {
+            const player1Empty = pits.slice(0, 6).every(p => p === 0);
+            const player2Empty = pits.slice(7, 13).every(p => p === 0);
+            return player1Empty || player2Empty;
+        }
+
+        function endGame() {
+            gameActive = false;
+
+            // Collect remaining stones
+            const player1Remaining = pits.slice(0, 6).reduce((a, b) => a + b, 0);
+            const player2Remaining = pits.slice(7, 13).reduce((a, b) => a + b, 0);
+
+            // The player whose side is NOT empty gets the opponent's remaining stones
+            if (pits.slice(0, 6).every(p => p === 0)) {
+                pits[13] += player2Remaining;
+            } else {
+                pits[6] += player1Remaining;
+            }
+
+            // Clear the pits
+            for (let i = 0; i < 6; i++) pits[i] = 0;
+            for (let i = 7; i < 13; i++) pits[i] = 0;
+
+            renderBoard();
+
+            const statusEl = document.getElementById('status');
+            if (pits[6] > pits[13]) {
+                statusEl.textContent = `${player1Name} wins! (${pits[6]} - ${pits[13]})`;
+                statusEl.classList.add('winner');
+                if (gameMode === 'ai') {
+                    GameUtils.stats.update('mancala', 'win');
+                    GameUtils.highScores.add('mancala', player1Name, pits[6], { opponent: pits[13] });
+                } else {
+                    GameUtils.stats.update('mancala', 'win');
+                }
+            } else if (pits[13] > pits[6]) {
+                statusEl.textContent = `${player2Name} wins! (${pits[13]} - ${pits[6]})`;
+                statusEl.classList.add('winner');
+                if (gameMode === 'ai') {
+                    GameUtils.stats.update('mancala', 'loss');
+                } else {
+                    GameUtils.stats.update('mancala', 'win');
+                }
+            } else {
+                statusEl.textContent = `It's a tie! (${pits[6]} - ${pits[13]})`;
+                GameUtils.stats.update('mancala', 'draw');
+            }
+
+            GameUtils.renderStats('mancala', 'stats');
+        }
+
+        function updateStatus() {
+            const statusEl = document.getElementById('status');
+            statusEl.classList.remove('winner');
+            const playerName = currentPlayer === 1 ? player1Name : player2Name;
+            statusEl.textContent = `${playerName}'s turn`;
+        }
+
+        async function aiMove() {
+            if (!gameActive || currentPlayer !== 2) return;
+
+            let move;
+            switch (difficulty) {
+                case 'easy':
+                    move = getRandomMove();
+                    break;
+                case 'medium':
+                    move = Math.random() > 0.4 ? getBestMove() : getRandomMove();
+                    break;
+                case 'hard':
+                    move = getBestMove();
+                    break;
+            }
+
+            if (move !== null) {
+                await makeMove(move);
+            }
+        }
+
+        function getRandomMove() {
+            const available = [];
+            for (let i = 7; i <= 12; i++) {
+                if (pits[i] > 0) available.push(i);
+            }
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function getBestMove() {
+            const available = [];
+            for (let i = 7; i <= 12; i++) {
+                if (pits[i] > 0) available.push(i);
+            }
+
+            // Priority 1: Move that lands in store (extra turn)
+            for (const pit of available) {
+                const stones = pits[pit];
+                let endIndex = pit + stones;
+
+                // Account for skipping player 1's store
+                if (pit + stones >= 6 && pit + stones < 13) {
+                    endIndex++;
+                }
+                endIndex = endIndex % 14;
+
+                if (endIndex === 13) return pit;
+            }
+
+            // Priority 2: Capture move
+            for (const pit of available) {
+                const stones = pits[pit];
+                let endIndex = pit;
+                let remaining = stones;
+
+                while (remaining > 0) {
+                    endIndex = (endIndex + 1) % 14;
+                    if (endIndex === 6) continue; // Skip opponent store
+                    remaining--;
+                }
+
+                if (endIndex >= 7 && endIndex <= 12 && pits[endIndex] === 0) {
+                    const opposite = 12 - endIndex;
+                    if (pits[opposite] > 0) return pit;
+                }
+            }
+
+            // Priority 3: Move that gives the most stones
+            let bestMove = available[0];
+            let maxStones = -1;
+
+            for (const pit of available) {
+                if (pits[pit] > maxStones) {
+                    maxStones = pits[pit];
+                    bestMove = pit;
+                }
+            }
+
+            return bestMove;
+        }
+
+        init();
+    </script>
+</body>
+</html>
