@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 8 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 10 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
@@ -16,7 +16,9 @@ A collection of 8 classic games built with vanilla HTML, CSS, and JavaScript. De
     ├── hangman.html    # 5 word categories
     ├── memory.html     # 4 board sizes
     ├── checkers.html   # Multi-jumps, king promotion
-    └── chess.html      # Full rules (castling, en passant, promotion)
+    ├── chess.html      # Full rules (castling, en passant, promotion)
+    ├── rushhour.html   # Sliding block puzzle, 20 levels
+    └── battleship.html # Naval combat with ship placement
 ```
 
 ## Key Features
@@ -50,6 +52,19 @@ A collection of 8 classic games built with vanilla HTML, CSS, and JavaScript. De
 - 6-deck shoe, dealer stands on 17
 - Blackjack pays 3:2
 - Chips persist in localStorage
+
+### Rush Hour
+- 20 puzzles across 4 difficulty levels (Beginner → Expert)
+- Drag vehicles to slide them along their orientation
+- Red car must reach the right exit to win
+- Par scores and 3-star rating system
+- Progress saved in localStorage
+
+### Battleship
+- 10x10 grid with 5 ships (Carrier, Battleship, Cruiser, Submarine, Destroyer)
+- Ship placement phase with rotate and random options
+- AI difficulty: Easy (random), Medium (hunt/target), Hard (checkerboard + smart targeting)
+- 2-player mode with device passing
 
 ## Development
 To test locally:

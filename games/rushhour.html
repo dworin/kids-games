@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rush Hour - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .puzzle-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px auto;
+        }
+        .board-container {
+            position: relative;
+            background: var(--dark-bg);
+            border-radius: 15px;
+            padding: 15px;
+        }
+        .rush-board {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 4px;
+            width: 330px;
+            height: 330px;
+            background: #2a2a3e;
+            border-radius: 10px;
+            position: relative;
+        }
+        .board-cell {
+            background: #1a1a2e;
+            border-radius: 4px;
+        }
+        .exit-marker {
+            position: absolute;
+            right: -25px;
+            top: calc(33.33% + 2px - 10px);
+            width: 20px;
+            height: calc(16.67% - 4px);
+            background: var(--success-color);
+            border-radius: 0 8px 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+        .vehicle {
+            position: absolute;
+            border-radius: 8px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: rgba(255,255,255,0.8);
+            font-size: 1.5rem;
+            transition: box-shadow 0.2s;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .vehicle:hover {
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+        }
+        .vehicle.dragging {
+            cursor: grabbing;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+        .vehicle.target {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        .vehicle.car-1 { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .vehicle.car-2 { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .vehicle.car-3 { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .vehicle.car-4 { background: linear-gradient(135deg, #f39c12, #d68910); }
+        .vehicle.car-5 { background: linear-gradient(135deg, #1abc9c, #16a085); }
+        .vehicle.truck-1 { background: linear-gradient(135deg, #e67e22, #d35400); }
+        .vehicle.truck-2 { background: linear-gradient(135deg, #34495e, #2c3e50); }
+        .vehicle.truck-3 { background: linear-gradient(135deg, #fd79a8, #e84393); }
+
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .info-box {
+            background: var(--card-bg);
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .info-box .label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .info-box .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .level-selection {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+        .level-btn {
+            aspect-ratio: 1;
+            border: 2px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+        .level-btn:hover { border-color: var(--primary-color); transform: scale(1.05); }
+        .level-btn.completed { background: var(--success-color); border-color: var(--success-color); }
+        .level-btn.current { background: var(--primary-color); border-color: var(--primary-color); }
+        .difficulty-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .difficulty-badge.beginner { background: #27ae60; }
+        .difficulty-badge.intermediate { background: #f39c12; }
+        .difficulty-badge.advanced { background: #e74c3c; }
+        .difficulty-badge.expert { background: #8e44ad; }
+
+        .win-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        .win-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .win-modal {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            transform: scale(0.8);
+            transition: transform 0.3s;
+        }
+        .win-overlay.active .win-modal {
+            transform: scale(1);
+        }
+        .win-modal h2 {
+            color: var(--success-color);
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        .win-modal .stars {
+            font-size: 3rem;
+            margin: 15px 0;
+        }
+
+        @media (max-width: 400px) {
+            .rush-board {
+                width: 280px;
+                height: 280px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Rush Hour</h1>
+            <a href="../index.html" class="back-btn">&#8592; Back to Games</a>
+        </div>
+
+        <div id="levelSelect" class="game-container">
+            <h2 style="text-align: center; margin-bottom: 20px;">Select Level</h2>
+            <div class="level-selection" id="levelGrid"></div>
+            <div class="game-status" style="margin-top: 15px; text-align: center;">
+                Slide the vehicles to let the <span style="color: #e74c3c; font-weight: bold;">red car</span> escape through the exit!
+            </div>
+        </div>
+
+        <div id="game" class="game-container" style="display: none;">
+            <div style="text-align: center;">
+                <span class="difficulty-badge" id="difficultyBadge">Beginner</span>
+                <h3 id="levelTitle">Level 1</h3>
+            </div>
+
+            <div class="game-info">
+                <div class="info-box">
+                    <div class="label">Moves</div>
+                    <div class="value" id="moveCount">0</div>
+                </div>
+                <div class="info-box">
+                    <div class="label">Best</div>
+                    <div class="value" id="bestMoves">-</div>
+                </div>
+            </div>
+
+            <div class="puzzle-area">
+                <div class="board-container">
+                    <div class="rush-board" id="board"></div>
+                    <div class="exit-marker">&#8594;</div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn" onclick="resetLevel()">Reset</button>
+                <button class="btn btn-secondary" onclick="showLevelSelect()">Levels</button>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <h3 style="margin-bottom: 15px;">Statistics</h3>
+            <div id="stats"></div>
+        </div>
+    </div>
+
+    <div class="win-overlay" id="winOverlay">
+        <div class="win-modal">
+            <h2>Level Complete!</h2>
+            <div class="stars" id="winStars"></div>
+            <p id="winMessage"></p>
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn" onclick="nextLevel()">Next Level</button>
+                <button class="btn btn-secondary" onclick="closeWin()">Levels</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        // Puzzle definitions: each vehicle has [row, col, length, isHorizontal]
+        // Target car is always first (red car that must escape through right side of row 2)
+        const puzzles = [
+            // Beginner (1-5) - Simple puzzles with few vehicles
+            {
+                difficulty: 'beginner',
+                vehicles: [
+                    [2, 0, 2, true],   // Red car
+                    [0, 2, 3, false],  // Truck blocking
+                ],
+                par: 5
+            },
+            {
+                difficulty: 'beginner',
+                vehicles: [
+                    [2, 1, 2, true],   // Red car
+                    [0, 0, 3, false],  // Truck left
+                    [2, 4, 2, false],  // Car blocking exit
+                ],
+                par: 8
+            },
+            {
+                difficulty: 'beginner',
+                vehicles: [
+                    [2, 0, 2, true],   // Red car
+                    [0, 2, 2, false],  // Car
+                    [2, 3, 3, false],  // Truck blocking
+                    [5, 0, 2, true],   // Car bottom
+                ],
+                par: 10
+            },
+            {
+                difficulty: 'beginner',
+                vehicles: [
+                    [2, 1, 2, true],   // Red car
+                    [0, 0, 2, false],  // Car
+                    [0, 3, 2, true],   // Car top
+                    [1, 4, 3, false],  // Truck
+                    [4, 0, 2, true],   // Car bottom
+                ],
+                par: 12
+            },
+            {
+                difficulty: 'beginner',
+                vehicles: [
+                    [2, 0, 2, true],   // Red car
+                    [0, 0, 2, true],   // Car
+                    [0, 3, 3, false],  // Truck
+                    [2, 2, 2, false],  // Car
+                    [4, 1, 2, true],   // Car
+                    [4, 4, 2, false],  // Car
+                ],
+                par: 14
+            },
+            // Intermediate (6-10)
+            {
+                difficulty: 'intermediate',
+                vehicles: [
+                    [2, 0, 2, true],   // Red car
+                    [0, 0, 2, false],  // Car
+                    [0, 1, 2, true],   // Car
+                    [0, 4, 3, false],  // Truck
+                    [2, 2, 2, false],  // Car
+                    [3, 3, 2, true],   // Car
+                    [4, 0, 2, true],   // Car
+                    [5, 2, 2, true],   // Car
+                ],
+                par: 18
+            },
+            {
+                difficulty: 'intermediate',
+                vehicles: [
+                    [2, 1, 2, true],   // Red car
+                    [0, 0, 3, false],  // Truck
+                    [0, 1, 2, true],   // Car
+                    [0, 4, 2, false],  // Car
+                    [2, 4, 2, false],  // Car
+                    [3, 1, 3, true],   // Truck
+                    [4, 5, 2, false],  // Car
+                    [5, 0, 2, true],   // Car
+                ],
+                par: 20
+            },
+            {
+                difficulty: 'intermediate',
+                vehicles: [
+                    [2, 0, 2, true],   // Red car
+                    [0, 0, 2, true],   // Car
+                    [0, 3, 2, false],  // Car
+                    [1, 2, 2, false],  // Car
+                    [2, 4, 2, false],  // Car
+                    [3, 0, 2, false],  // Car
+                    [3, 1, 2, true],   // Car
+                    [4, 3, 3, true],   // Truck
+                    [5, 0, 2, true],   // Car
+                ],
+                par: 22
+            },
+            {
+                difficulty: 'intermediate',
+                vehicles: [
+                    [2, 2, 2, true],   // Red car
+                    [0, 0, 2, true],   // Car
+                    [0, 2, 2, false],  // Car
+                    [0, 4, 2, true],   // Car
+                    [1, 0, 2, false],  // Car
+                    [2, 5, 2, false],  // Car
+                    [3, 0, 3, true],   // Truck
+                    [4, 4, 2, false],  // Car
+                    [5, 1, 3, true],   // Truck
+                ],
+                par: 25
+            },
+            {
+                difficulty: 'intermediate',
+                vehicles: [
+                    [2, 0, 2, true],   // Red car
+                    [0, 0, 2, false],  // Car
+                    [0, 2, 3, true],   // Truck
+                    [1, 2, 2, false],  // Car
+                    [2, 3, 3, false],  // Truck
+                    [3, 0, 2, true],   // Car
+                    [3, 4, 2, false],  // Car
+                    [5, 0, 3, true],   // Truck
+                    [5, 4, 2, true],   // Car
+                ],
+                par: 28
+            },
+            // Advanced (11-15)
+            {
+                difficulty: 'advanced',
+                vehicles: [
+                    [2, 1, 2, true],   // Red car
+                    [0, 0, 2, false],  // Car
+                    [0, 1, 2, true],   // Car
+                    [0, 4, 2, false],  // Car
+                    [1, 3, 2, false],  // Car
+                    [2, 0, 2, false],  // Car
+                    [2, 5, 2, false],  // Car
+                    [3, 1, 2, true],   // Car
+                    [4, 0, 2, true],   // Car
+                    [4, 3, 3, true],   // Truck
+                    [5, 2, 2, true],   // Car
+                ],
+                par: 32
+            },
+            {
+                difficulty: 'advanced',
+                vehicles: [
+                    [2, 0, 2, true],   // Red car
+                    [0, 0, 3, true],   // Truck
+                    [0, 4, 2, false],  // Car
+                    [1, 3, 2, false],  // Car
+                    [2, 2, 2, false],  // Car
+                    [2, 5, 2, false],  // Car
+                    [3, 0, 2, true],   // Car
+                    [4, 1, 2, false],  // Car
+                    [4, 2, 2, true],   // Car
+                    [4, 4, 2, false],  // Car
+                    [5, 0, 2, true],   // Car
+                ],
+                par: 35
+            },
+            {
+                difficulty: 'advanced',
+                vehicles: [
+                    [2, 2, 2, true],   // Red car
+                    [0, 0, 2, true],   // Car
+                    [0, 2, 2, false],  // Car
+                    [0, 3, 3, true],   // Truck
+                    [1, 0, 2, false],  // Car
+                    [3, 0, 2, false],  // Car
+                    [2, 5, 2, false],  // Car
+                    [3, 1, 2, true],   // Car
+                    [5, 0, 2, true],   // Car
+                    [4, 3, 2, false],  // Car
+                    [4, 4, 2, true],   // Car
+                    [5, 4, 2, true],   // Car
+                ],
+                par: 38
+            },
+            {
+                difficulty: 'advanced',
+                vehicles: [
+                    [2, 1, 2, true],   // Red car
+                    [0, 0, 2, false],  // Car
+                    [0, 1, 2, true],   // Car
+                    [0, 3, 3, false],  // Truck
+                    [0, 5, 2, false],  // Car
+                    [2, 0, 2, false],  // Car
+                    [2, 4, 2, false],  // Car
+                    [3, 1, 2, true],   // Car
+                    [4, 0, 2, true],   // Car
+                    [4, 4, 2, true],   // Car
+                    [5, 2, 3, true],   // Truck
+                ],
+                par: 40
+            },
+            {
+                difficulty: 'advanced',
+                vehicles: [
+                    [2, 0, 2, true],   // Red car
+                    [0, 0, 2, false],  // Car
+                    [0, 1, 2, true],   // Car
+                    [0, 4, 2, false],  // Car
+                    [1, 3, 2, false],  // Car
+                    [2, 2, 3, false],  // Truck
+                    [2, 5, 2, false],  // Car
+                    [3, 0, 2, true],   // Car
+                    [4, 3, 2, true],   // Car
+                    [4, 5, 2, false],  // Car
+                    [5, 0, 3, true],   // Truck
+                ],
+                par: 42
+            },
+            // Expert (16-20)
+            {
+                difficulty: 'expert',
+                vehicles: [
+                    [2, 1, 2, true],   // Red car
+                    [0, 0, 3, false],  // Truck
+                    [0, 1, 2, true],   // Car
+                    [0, 4, 2, false],  // Car
+                    [1, 3, 2, false],  // Car
+                    [2, 0, 2, false],  // Car
+                    [2, 4, 2, false],  // Car
+                    [3, 1, 2, true],   // Car
+                    [3, 3, 2, true],   // Car
+                    [4, 0, 2, true],   // Car
+                    [4, 5, 2, false],  // Car
+                    [5, 2, 3, true],   // Truck
+                ],
+                par: 48
+            },
+            {
+                difficulty: 'expert',
+                vehicles: [
+                    [2, 0, 2, true],   // Red car
+                    [0, 0, 2, true],   // Car
+                    [0, 2, 2, false],  // Car
+                    [0, 3, 2, true],   // Car
+                    [0, 5, 3, false],  // Truck
+                    [2, 3, 2, false],  // Car
+                    [3, 0, 2, true],   // Car
+                    [3, 4, 2, true],   // Car
+                    [4, 1, 2, false],  // Car
+                    [4, 4, 2, false],  // Car
+                    [5, 2, 2, true],   // Car
+                ],
+                par: 52
+            },
+            {
+                difficulty: 'expert',
+                vehicles: [
+                    [2, 2, 2, true],   // Red car
+                    [0, 0, 2, false],  // Car
+                    [0, 1, 2, true],   // Car
+                    [0, 3, 2, false],  // Car
+                    [0, 4, 2, true],   // Car
+                    [1, 5, 2, false],  // Car
+                    [2, 0, 2, false],  // Car
+                    [2, 5, 2, false],  // Car
+                    [3, 1, 2, true],   // Car
+                    [3, 4, 2, false],  // Car
+                    [4, 0, 2, true],   // Car
+                    [4, 2, 2, true],   // Car
+                    [5, 0, 3, true],   // Truck
+                    [5, 4, 2, true],   // Car
+                ],
+                par: 55
+            },
+            {
+                difficulty: 'expert',
+                vehicles: [
+                    [2, 1, 2, true],   // Red car
+                    [0, 0, 2, true],   // Car
+                    [0, 3, 3, false],  // Truck
+                    [0, 4, 2, true],   // Car
+                    [1, 0, 2, false],  // Car
+                    [2, 4, 2, false],  // Car
+                    [3, 0, 2, true],   // Car
+                    [3, 5, 2, false],  // Car
+                    [4, 0, 2, true],   // Car
+                    [4, 2, 2, true],   // Car
+                    [5, 0, 3, true],   // Truck
+                    [5, 4, 2, true],   // Car
+                ],
+                par: 58
+            },
+            {
+                difficulty: 'expert',
+                vehicles: [
+                    [2, 0, 2, true],   // Red car
+                    [0, 0, 2, false],  // Car
+                    [0, 1, 2, true],   // Car
+                    [0, 3, 3, false],  // Truck
+                    [0, 4, 2, true],   // Car
+                    [1, 5, 2, false],  // Car
+                    [2, 2, 2, false],  // Car
+                    [3, 0, 2, true],   // Car
+                    [3, 3, 2, true],   // Car
+                    [3, 5, 2, false],  // Car
+                    [4, 0, 2, true],   // Car
+                    [4, 2, 2, true],   // Car
+                    [5, 0, 3, true],   // Truck
+                    [5, 4, 2, true],   // Car
+                ],
+                par: 62
+            },
+        ];
+
+        // Game state
+        let currentLevel = 0;
+        let vehicles = [];
+        let moves = 0;
+        let draggingVehicle = null;
+        let dragStartPos = null;
+        let vehicleStartPos = null;
+        let completedLevels = {};
+        let bestScores = {};
+
+        let CELL_SIZE = 330 / 6; // Board size / 6 cells
+        const GAP = 4;
+
+        function updateCellSize() {
+            const board = document.getElementById('board');
+            if (board) {
+                CELL_SIZE = board.offsetWidth / 6;
+            }
+        }
+
+        function init() {
+            loadProgress();
+            renderLevelGrid();
+            GameUtils.renderStats('rushhour', 'stats');
+
+            // Touch and mouse events on board
+            const board = document.getElementById('board');
+            board.addEventListener('mousedown', startDrag);
+            board.addEventListener('touchstart', startDrag, { passive: false });
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('touchmove', onDrag, { passive: false });
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchend', endDrag);
+
+            // Re-render on resize to fix positioning
+            window.addEventListener('resize', () => {
+                if (document.getElementById('game').style.display !== 'none') {
+                    renderBoard();
+                }
+            });
+        }
+
+        function loadProgress() {
+            completedLevels = JSON.parse(localStorage.getItem('rushhour_completed') || '{}');
+            bestScores = JSON.parse(localStorage.getItem('rushhour_best') || '{}');
+        }
+
+        function saveProgress() {
+            localStorage.setItem('rushhour_completed', JSON.stringify(completedLevels));
+            localStorage.setItem('rushhour_best', JSON.stringify(bestScores));
+        }
+
+        function renderLevelGrid() {
+            const grid = document.getElementById('levelGrid');
+            grid.innerHTML = '';
+
+            puzzles.forEach((puzzle, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'level-btn';
+                if (completedLevels[index]) btn.classList.add('completed');
+                btn.textContent = index + 1;
+                btn.onclick = () => startLevel(index);
+                grid.appendChild(btn);
+            });
+        }
+
+        function showLevelSelect() {
+            document.getElementById('levelSelect').style.display = 'block';
+            document.getElementById('game').style.display = 'none';
+            renderLevelGrid();
+        }
+
+        function startLevel(levelIndex) {
+            currentLevel = levelIndex;
+            const puzzle = puzzles[levelIndex];
+
+            // Clone vehicles from puzzle
+            vehicles = puzzle.vehicles.map((v, i) => ({
+                id: i,
+                row: v[0],
+                col: v[1],
+                length: v[2],
+                horizontal: v[3],
+                isTarget: i === 0
+            }));
+
+            moves = 0;
+
+            document.getElementById('levelSelect').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+
+            const badge = document.getElementById('difficultyBadge');
+            badge.textContent = puzzle.difficulty.charAt(0).toUpperCase() + puzzle.difficulty.slice(1);
+            badge.className = 'difficulty-badge ' + puzzle.difficulty;
+
+            document.getElementById('levelTitle').textContent = `Level ${levelIndex + 1}`;
+            document.getElementById('moveCount').textContent = '0';
+            document.getElementById('bestMoves').textContent = bestScores[levelIndex] || '-';
+
+            renderBoard();
+        }
+
+        function resetLevel() {
+            startLevel(currentLevel);
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('board');
+            updateCellSize();
+
+            // Create empty cells
+            board.innerHTML = '';
+            for (let i = 0; i < 36; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'board-cell';
+                board.appendChild(cell);
+            }
+
+            // Render vehicles
+            vehicles.forEach((v, index) => {
+                const el = document.createElement('div');
+                el.className = 'vehicle';
+                el.dataset.id = v.id;
+
+                if (v.isTarget) {
+                    el.classList.add('target');
+                } else if (v.length === 2) {
+                    el.classList.add('car-' + ((index % 5) + 1));
+                } else {
+                    el.classList.add('truck-' + ((index % 3) + 1));
+                }
+
+                // Position and size
+                const width = v.horizontal ? (v.length * CELL_SIZE - GAP) : (CELL_SIZE - GAP);
+                const height = v.horizontal ? (CELL_SIZE - GAP) : (v.length * CELL_SIZE - GAP);
+                const left = v.col * CELL_SIZE + GAP/2;
+                const top = v.row * CELL_SIZE + GAP/2;
+
+                el.style.width = width + 'px';
+                el.style.height = height + 'px';
+                el.style.left = left + 'px';
+                el.style.top = top + 'px';
+
+                // Icon
+                el.innerHTML = v.isTarget ? '&#x1F697;' : (v.length === 3 ? '&#x1F69A;' : '');
+
+                board.appendChild(el);
+            });
+        }
+
+        function getEventPos(e) {
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        }
+
+        function startDrag(e) {
+            const target = e.target.closest('.vehicle');
+            if (!target) return;
+
+            e.preventDefault();
+            updateCellSize();
+            const pos = getEventPos(e);
+            const id = parseInt(target.dataset.id);
+            draggingVehicle = vehicles.find(v => v.id === id);
+            dragStartPos = pos;
+            vehicleStartPos = { row: draggingVehicle.row, col: draggingVehicle.col };
+            target.classList.add('dragging');
+        }
+
+        function onDrag(e) {
+            if (!draggingVehicle) return;
+            e.preventDefault();
+
+            const pos = getEventPos(e);
+            const deltaX = pos.x - dragStartPos.x;
+            const deltaY = pos.y - dragStartPos.y;
+
+            // Calculate cell movement
+            let newCol = vehicleStartPos.col;
+            let newRow = vehicleStartPos.row;
+
+            if (draggingVehicle.horizontal) {
+                const cellDelta = Math.round(deltaX / CELL_SIZE);
+                newCol = vehicleStartPos.col + cellDelta;
+            } else {
+                const cellDelta = Math.round(deltaY / CELL_SIZE);
+                newRow = vehicleStartPos.row + cellDelta;
+            }
+
+            // Clamp to board bounds
+            if (draggingVehicle.horizontal) {
+                newCol = Math.max(0, Math.min(6 - draggingVehicle.length, newCol));
+            } else {
+                newRow = Math.max(0, Math.min(6 - draggingVehicle.length, newRow));
+            }
+
+            // Check collisions and find valid position
+            const validPos = findValidPosition(draggingVehicle, newRow, newCol);
+
+            // Update vehicle position visually
+            const el = document.querySelector(`.vehicle[data-id="${draggingVehicle.id}"]`);
+            if (el) {
+                el.style.left = (validPos.col * CELL_SIZE + GAP/2) + 'px';
+                el.style.top = (validPos.row * CELL_SIZE + GAP/2) + 'px';
+            }
+        }
+
+        function findValidPosition(vehicle, targetRow, targetCol) {
+            const startRow = vehicle.horizontal ? vehicle.row : vehicle.row;
+            const startCol = vehicle.horizontal ? vehicle.col : vehicle.col;
+
+            let bestRow = startRow;
+            let bestCol = startCol;
+
+            if (vehicle.horizontal) {
+                // Move towards target column
+                const direction = targetCol > startCol ? 1 : -1;
+                for (let col = startCol; direction > 0 ? col <= targetCol : col >= targetCol; col += direction) {
+                    if (canPlaceVehicle(vehicle, vehicle.row, col)) {
+                        bestCol = col;
+                    } else {
+                        break;
+                    }
+                }
+            } else {
+                // Move towards target row
+                const direction = targetRow > startRow ? 1 : -1;
+                for (let row = startRow; direction > 0 ? row <= targetRow : row >= targetRow; row += direction) {
+                    if (canPlaceVehicle(vehicle, row, vehicle.col)) {
+                        bestRow = row;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            return { row: bestRow, col: bestCol };
+        }
+
+        function canPlaceVehicle(vehicle, row, col) {
+            // Check bounds
+            if (vehicle.horizontal) {
+                if (col < 0 || col + vehicle.length > 6) return false;
+            } else {
+                if (row < 0 || row + vehicle.length > 6) return false;
+            }
+
+            // Check collision with other vehicles
+            for (const other of vehicles) {
+                if (other.id === vehicle.id) continue;
+
+                // Get cells occupied by other vehicle
+                const otherCells = getVehicleCells(other);
+
+                // Get cells that would be occupied by vehicle at new position
+                const newCells = [];
+                for (let i = 0; i < vehicle.length; i++) {
+                    if (vehicle.horizontal) {
+                        newCells.push({ row: row, col: col + i });
+                    } else {
+                        newCells.push({ row: row + i, col: col });
+                    }
+                }
+
+                // Check for overlap
+                for (const nc of newCells) {
+                    for (const oc of otherCells) {
+                        if (nc.row === oc.row && nc.col === oc.col) {
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        function getVehicleCells(vehicle) {
+            const cells = [];
+            for (let i = 0; i < vehicle.length; i++) {
+                if (vehicle.horizontal) {
+                    cells.push({ row: vehicle.row, col: vehicle.col + i });
+                } else {
+                    cells.push({ row: vehicle.row + i, col: vehicle.col });
+                }
+            }
+            return cells;
+        }
+
+        function endDrag(e) {
+            if (!draggingVehicle) return;
+
+            const el = document.querySelector(`.vehicle[data-id="${draggingVehicle.id}"]`);
+            if (el) el.classList.remove('dragging');
+
+            // Get final position from element
+            const left = parseFloat(el.style.left);
+            const top = parseFloat(el.style.top);
+            const finalCol = Math.round((left - GAP/2) / CELL_SIZE);
+            const finalRow = Math.round((top - GAP/2) / CELL_SIZE);
+
+            // Check if moved
+            if (finalRow !== vehicleStartPos.row || finalCol !== vehicleStartPos.col) {
+                moves++;
+                document.getElementById('moveCount').textContent = moves;
+                draggingVehicle.row = finalRow;
+                draggingVehicle.col = finalCol;
+
+                // Check win condition
+                checkWin();
+            }
+
+            draggingVehicle = null;
+            dragStartPos = null;
+            vehicleStartPos = null;
+
+            renderBoard();
+        }
+
+        function checkWin() {
+            const target = vehicles[0];
+            // Target car escapes when it reaches column 4 (rightmost position for a length-2 car)
+            if (target.horizontal && target.col === 4) {
+                onWin();
+            }
+        }
+
+        function onWin() {
+            const puzzle = puzzles[currentLevel];
+
+            // Calculate stars based on par
+            const stars = calculateStars(moves, puzzle.par);
+
+            // Update best score
+            if (!bestScores[currentLevel] || moves < bestScores[currentLevel]) {
+                bestScores[currentLevel] = moves;
+            }
+            completedLevels[currentLevel] = true;
+            saveProgress();
+
+            // Update stats
+            GameUtils.stats.update('rushhour', 'win');
+
+            // Calculate score for high scores
+            const score = calculateScore(moves, puzzle.par, currentLevel);
+            GameUtils.highScores.add('rushhour', GameUtils.playerName.get(1), score, {
+                level: currentLevel + 1,
+                moves: moves,
+                par: puzzle.par
+            });
+
+            // Show win modal
+            document.getElementById('winStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+            document.getElementById('winMessage').textContent = `Completed in ${moves} moves (Par: ${puzzle.par})`;
+            document.getElementById('winOverlay').classList.add('active');
+
+            GameUtils.renderStats('rushhour', 'stats');
+        }
+
+        function calculateStars(moves, par) {
+            if (moves <= par) return 3;
+            if (moves <= par * 1.5) return 2;
+            return 1;
+        }
+
+        function calculateScore(moves, par, level) {
+            // Base score from level difficulty
+            const baseScore = (level + 1) * 100;
+            // Bonus for beating par
+            const parBonus = Math.max(0, (par - moves) * 10);
+            // Efficiency multiplier
+            const efficiency = Math.max(0.5, par / moves);
+            return Math.round((baseScore + parBonus) * efficiency);
+        }
+
+        function closeWin() {
+            document.getElementById('winOverlay').classList.remove('active');
+            showLevelSelect();
+        }
+
+        function nextLevel() {
+            document.getElementById('winOverlay').classList.remove('active');
+            if (currentLevel < puzzles.length - 1) {
+                startLevel(currentLevel + 1);
+            } else {
+                showLevelSelect();
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
