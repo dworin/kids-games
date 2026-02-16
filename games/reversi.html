@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reversi - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .reversi-board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 2px;
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 10px;
+            background: #1a472a;
+            border-radius: 10px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: #2d7a4a;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            position: relative;
+        }
+
+        .cell:hover {
+            background: #3d8a5a;
+        }
+
+        .cell.valid-move::after {
+            content: '';
+            width: 30%;
+            height: 30%;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+        }
+
+        .disc {
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            transition: transform 0.3s, background 0.3s;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .disc.black {
+            background: radial-gradient(circle at 30% 30%, #444, #111);
+        }
+
+        .disc.white {
+            background: radial-gradient(circle at 30% 30%, #fff, #ccc);
+        }
+
+        .disc.flipping {
+            animation: flip 0.4s ease-in-out;
+        }
+
+        @keyframes flip {
+            0% { transform: rotateY(0deg); }
+            50% { transform: rotateY(90deg); }
+            100% { transform: rotateY(180deg); }
+        }
+
+        .score-display {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 20px 0;
+        }
+
+        .score-box {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 25px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .score-box.active {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+        }
+
+        .score-disc {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .score-disc.black {
+            background: radial-gradient(circle at 30% 30%, #444, #111);
+        }
+
+        .score-disc.white {
+            background: radial-gradient(circle at 30% 30%, #fff, #ccc);
+        }
+
+        .score-info {
+            text-align: center;
+        }
+
+        .score-info .name {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .score-info .count {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .turn-indicator {
+            text-align: center;
+            font-size: 1.2rem;
+            margin: 15px 0;
+            min-height: 30px;
+        }
+
+        .pass-message {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffd54f;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        @media (max-width: 450px) {
+            .reversi-board {
+                max-width: 95vw;
+                gap: 1px;
+                padding: 5px;
+            }
+            .score-display { gap: 15px; }
+            .score-box { padding: 10px 15px; }
+            .score-disc { width: 30px; height: 30px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Reversi</h1>
+            <a href="../index.html" class="back-btn">&#8592; Back to Games</a>
+        </div>
+
+        <div id="setup" class="game-container">
+            <h2 style="text-align: center; margin-bottom: 20px;">Select Game Mode</h2>
+
+            <div class="mode-selection">
+                <button class="mode-btn active" data-mode="single">vs Computer</button>
+                <button class="mode-btn" data-mode="pvp">2 Players</button>
+            </div>
+
+            <div id="difficultySection">
+                <h3 style="text-align: center; margin: 20px 0 15px;">Difficulty</h3>
+                <div class="mode-selection">
+                    <button class="mode-btn" data-diff="easy">Easy</button>
+                    <button class="mode-btn active" data-diff="medium">Medium</button>
+                    <button class="mode-btn" data-diff="hard">Hard</button>
+                </div>
+            </div>
+
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn btn-success" onclick="startGame()">Start Game</button>
+            </div>
+
+            <div style="background: var(--card-bg); padding: 15px; border-radius: 10px; margin-top: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+                <h4 style="color: var(--text-primary); margin-bottom: 10px;">How to Play</h4>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Black moves first</li>
+                    <li>Place a disc to <strong>capture</strong> opponent discs between yours</li>
+                    <li>You must flip at least one disc each turn</li>
+                    <li>Game ends when neither player can move</li>
+                    <li>Most discs wins!</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="game" class="game-container" style="display: none;">
+            <div class="score-display">
+                <div class="score-box" id="blackScore">
+                    <div class="score-disc black"></div>
+                    <div class="score-info">
+                        <div class="name" id="blackName">Black</div>
+                        <div class="count" id="blackCount">2</div>
+                    </div>
+                </div>
+                <div class="score-box" id="whiteScore">
+                    <div class="score-disc white"></div>
+                    <div class="score-info">
+                        <div class="name" id="whiteName">White</div>
+                        <div class="count" id="whiteCount">2</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="turn-indicator" id="turnIndicator">Black's turn</div>
+            <div class="pass-message" id="passMessage" style="display: none;"></div>
+
+            <div class="reversi-board" id="board"></div>
+
+            <div class="game-status" id="status"></div>
+
+            <div class="btn-group">
+                <button class="btn" onclick="resetGame()">New Game</button>
+                <button class="btn btn-secondary" onclick="backToSetup()">Change Mode</button>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <h3 style="margin-bottom: 15px;">Statistics</h3>
+            <div id="stats"></div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        const EMPTY = 0;
+        const BLACK = 1;
+        const WHITE = 2;
+        const DIRECTIONS = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
+            [1, -1],  [1, 0],  [1, 1]
+        ];
+
+        let board = [];
+        let currentPlayer = BLACK;
+        let gameMode = 'single';
+        let difficulty = 'medium';
+        let gameActive = false;
+        let player1Name, player2Name;
+        let isProcessing = false;
+
+        function init() {
+            document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.mode-btn[data-mode]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    gameMode = btn.dataset.mode;
+                    document.getElementById('difficultySection').style.display =
+                        gameMode === 'single' ? 'block' : 'none';
+                });
+            });
+
+            document.querySelectorAll('.mode-btn[data-diff]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.mode-btn[data-diff]').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    difficulty = btn.dataset.diff;
+                });
+            });
+
+            GameUtils.renderStats('reversi', 'stats');
+        }
+
+        function startGame() {
+            player1Name = GameUtils.playerName.get(1);
+            player2Name = gameMode === 'pvp' ? GameUtils.playerName.get(2) : 'Computer';
+
+            document.getElementById('blackName').textContent = player1Name;
+            document.getElementById('whiteName').textContent = player2Name;
+
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+
+            resetGame();
+        }
+
+        function backToSetup() {
+            document.getElementById('setup').style.display = 'block';
+            document.getElementById('game').style.display = 'none';
+        }
+
+        function resetGame() {
+            // Initialize empty 8x8 board
+            board = Array(8).fill(null).map(() => Array(8).fill(EMPTY));
+
+            // Starting position
+            board[3][3] = WHITE;
+            board[3][4] = BLACK;
+            board[4][3] = BLACK;
+            board[4][4] = WHITE;
+
+            currentPlayer = BLACK;
+            gameActive = true;
+            isProcessing = false;
+
+            document.getElementById('status').textContent = '';
+            document.getElementById('status').className = 'game-status';
+            document.getElementById('passMessage').style.display = 'none';
+
+            renderBoard();
+            updateScores();
+            updateTurnIndicator();
+        }
+
+        function renderBoard() {
+            const boardEl = document.getElementById('board');
+            const validMoves = getValidMoves(currentPlayer);
+
+            boardEl.innerHTML = '';
+
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+
+                    if (board[row][col] !== EMPTY) {
+                        const disc = document.createElement('div');
+                        disc.className = `disc ${board[row][col] === BLACK ? 'black' : 'white'}`;
+                        cell.appendChild(disc);
+                    } else if (gameActive && validMoves.some(m => m.row === row && m.col === col)) {
+                        cell.classList.add('valid-move');
+                    }
+
+                    cell.addEventListener('click', () => handleClick(row, col));
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function handleClick(row, col) {
+            if (!gameActive || isProcessing) return;
+            if (gameMode === 'single' && currentPlayer === WHITE) return;
+
+            makeMove(row, col);
+        }
+
+        async function makeMove(row, col) {
+            const flips = getFlips(row, col, currentPlayer);
+            if (flips.length === 0) return;
+
+            isProcessing = true;
+            document.getElementById('passMessage').style.display = 'none';
+
+            // Place disc
+            board[row][col] = currentPlayer;
+            renderBoard();
+
+            // Animate flips
+            await GameUtils.delay(100);
+
+            for (const flip of flips) {
+                board[flip.row][flip.col] = currentPlayer;
+            }
+
+            // Add flip animation
+            renderBoard();
+            const cells = document.querySelectorAll('.cell');
+            flips.forEach(flip => {
+                const index = flip.row * 8 + flip.col;
+                const disc = cells[index].querySelector('.disc');
+                if (disc) disc.classList.add('flipping');
+            });
+
+            await GameUtils.delay(300);
+            updateScores();
+
+            // Switch player
+            currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+
+            // Check if current player can move
+            let validMoves = getValidMoves(currentPlayer);
+
+            if (validMoves.length === 0) {
+                // Current player must pass
+                const opponent = currentPlayer === BLACK ? WHITE : BLACK;
+                const opponentMoves = getValidMoves(opponent);
+
+                if (opponentMoves.length === 0) {
+                    // Neither player can move - game over
+                    endGame();
+                    isProcessing = false;
+                    return;
+                }
+
+                // Show pass message
+                const passName = currentPlayer === BLACK ? player1Name : player2Name;
+                document.getElementById('passMessage').textContent = `${passName} has no valid moves - turn passed!`;
+                document.getElementById('passMessage').style.display = 'block';
+
+                currentPlayer = opponent;
+                validMoves = opponentMoves;
+            }
+
+            updateTurnIndicator();
+            renderBoard();
+            isProcessing = false;
+
+            // AI move
+            if (gameActive && gameMode === 'single' && currentPlayer === WHITE) {
+                await GameUtils.delay(500);
+                const aiMove = getAIMove();
+                if (aiMove) {
+                    await makeMove(aiMove.row, aiMove.col);
+                }
+            }
+        }
+
+        function getValidMoves(player) {
+            const moves = [];
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (board[row][col] === EMPTY && getFlips(row, col, player).length > 0) {
+                        moves.push({ row, col });
+                    }
+                }
+            }
+            return moves;
+        }
+
+        function getFlips(row, col, player) {
+            if (board[row][col] !== EMPTY) return [];
+
+            const opponent = player === BLACK ? WHITE : BLACK;
+            const allFlips = [];
+
+            for (const [dr, dc] of DIRECTIONS) {
+                const flips = [];
+                let r = row + dr;
+                let c = col + dc;
+
+                while (r >= 0 && r < 8 && c >= 0 && c < 8 && board[r][c] === opponent) {
+                    flips.push({ row: r, col: c });
+                    r += dr;
+                    c += dc;
+                }
+
+                if (flips.length > 0 && r >= 0 && r < 8 && c >= 0 && c < 8 && board[r][c] === player) {
+                    allFlips.push(...flips);
+                }
+            }
+
+            return allFlips;
+        }
+
+        function getAIMove() {
+            const validMoves = getValidMoves(WHITE);
+            if (validMoves.length === 0) return null;
+
+            if (difficulty === 'easy') {
+                return validMoves[Math.floor(Math.random() * validMoves.length)];
+            }
+
+            // Score each move
+            const scoredMoves = validMoves.map(move => {
+                let score = getFlips(move.row, move.col, WHITE).length;
+
+                if (difficulty === 'hard') {
+                    // Corner bonus (corners can't be flipped)
+                    if ((move.row === 0 || move.row === 7) && (move.col === 0 || move.col === 7)) {
+                        score += 50;
+                    }
+                    // Edge bonus
+                    else if (move.row === 0 || move.row === 7 || move.col === 0 || move.col === 7) {
+                        score += 10;
+                    }
+                    // Avoid squares adjacent to corners (dangerous)
+                    else if (isAdjacentToCorner(move.row, move.col)) {
+                        score -= 25;
+                    }
+
+                    // Consider opponent mobility after this move
+                    const testBoard = board.map(row => [...row]);
+                    testBoard[move.row][move.col] = WHITE;
+                    const flips = getFlips(move.row, move.col, WHITE);
+                    flips.forEach(f => testBoard[f.row][f.col] = WHITE);
+
+                    // Temporarily apply move to count opponent options
+                    const originalBoard = board;
+                    board = testBoard;
+                    const opponentMoves = getValidMoves(BLACK).length;
+                    board = originalBoard;
+
+                    score -= opponentMoves * 2; // Reduce score if giving opponent many options
+                }
+
+                return { ...move, score };
+            });
+
+            // Sort by score and pick best (with some randomness for medium)
+            scoredMoves.sort((a, b) => b.score - a.score);
+
+            if (difficulty === 'medium') {
+                // Pick from top 3
+                const topMoves = scoredMoves.slice(0, Math.min(3, scoredMoves.length));
+                return topMoves[Math.floor(Math.random() * topMoves.length)];
+            }
+
+            return scoredMoves[0];
+        }
+
+        function isAdjacentToCorner(row, col) {
+            const corners = [[0, 0], [0, 7], [7, 0], [7, 7]];
+            for (const [cr, cc] of corners) {
+                if (Math.abs(row - cr) <= 1 && Math.abs(col - cc) <= 1 && !(row === cr && col === cc)) {
+                    // Only dangerous if corner is empty
+                    if (board[cr][cc] === EMPTY) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function updateScores() {
+            let black = 0, white = 0;
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (board[row][col] === BLACK) black++;
+                    else if (board[row][col] === WHITE) white++;
+                }
+            }
+            document.getElementById('blackCount').textContent = black;
+            document.getElementById('whiteCount').textContent = white;
+        }
+
+        function updateTurnIndicator() {
+            const name = currentPlayer === BLACK ? player1Name : player2Name;
+            const color = currentPlayer === BLACK ? 'Black' : 'White';
+            document.getElementById('turnIndicator').textContent = `${name}'s turn (${color})`;
+
+            document.getElementById('blackScore').classList.toggle('active', currentPlayer === BLACK);
+            document.getElementById('whiteScore').classList.toggle('active', currentPlayer === WHITE);
+        }
+
+        function endGame() {
+            gameActive = false;
+
+            let black = 0, white = 0;
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    if (board[row][col] === BLACK) black++;
+                    else if (board[row][col] === WHITE) white++;
+                }
+            }
+
+            const statusEl = document.getElementById('status');
+            document.getElementById('turnIndicator').textContent = 'Game Over';
+
+            if (black > white) {
+                statusEl.textContent = `${player1Name} wins ${black}-${white}!`;
+                statusEl.classList.add('winner');
+                GameUtils.stats.update('reversi', 'win');
+            } else if (white > black) {
+                statusEl.textContent = `${player2Name} wins ${white}-${black}!`;
+                statusEl.classList.add(gameMode === 'pvp' ? 'winner' : 'loser');
+                GameUtils.stats.update('reversi', gameMode === 'pvp' ? 'win' : 'loss');
+            } else {
+                statusEl.textContent = `It's a tie! ${black}-${white}`;
+                statusEl.classList.add('winner');
+                GameUtils.stats.update('reversi', 'draw');
+            }
+
+            GameUtils.renderStats('reversi', 'stats');
+        }
+
+        init();
+    </script>
+</body>
+</html>

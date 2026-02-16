@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spot It - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .cards-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .spot-card {
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #f8fafc, #e2e8f0);
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            border: 4px solid #cbd5e1;
+            transition: transform 0.3s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .spot-card.shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-6px); }
+            80% { transform: translateX(6px); }
+        }
+
+        .spot-card .symbol {
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.15s, filter 0.15s;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+
+        .spot-card .symbol:hover {
+            transform: scale(1.2);
+            filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+        }
+
+        .spot-card .symbol.matched {
+            animation: matchPulse 0.5s ease-out;
+            filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.8));
+        }
+
+        @keyframes matchPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); }
+            100% { transform: scale(1.2); }
+        }
+
+        .spot-card.correct {
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.6), 0 8px 32px rgba(0, 0, 0, 0.4);
+            border-color: var(--success-color);
+        }
+
+        .spot-card.wrong {
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.6), 0 8px 32px rgba(0, 0, 0, 0.4);
+            border-color: var(--danger-color);
+        }
+
+        .game-info-bar {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: var(--card-bg);
+            border-radius: 12px;
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-item .label {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-item .value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--text-primary);
+        }
+
+        .info-item .value.timer {
+            color: var(--warning-color);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .vs-divider {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--text-secondary);
+            display: none;
+        }
+
+        .card-label {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+        }
+
+        .card-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .round-indicator {
+            text-align: center;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .penalty-flash {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--danger-color);
+            pointer-events: none;
+            animation: flashUp 0.8s ease-out forwards;
+            z-index: 100;
+        }
+
+        @keyframes flashUp {
+            0% { opacity: 1; transform: translate(-50%, -50%); }
+            100% { opacity: 0; transform: translate(-50%, -100%); }
+        }
+
+        .bonus-flash {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--success-color);
+            pointer-events: none;
+            animation: flashUp 0.8s ease-out forwards;
+            z-index: 100;
+        }
+
+        @media (max-width: 640px) {
+            .spot-card {
+                width: 200px;
+                height: 200px;
+            }
+            .cards-area {
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .spot-card {
+                width: 160px;
+                height: 160px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Spot It</h1>
+            <a href="../index.html" class="back-btn">&#8592; Back to Games</a>
+        </div>
+
+        <div id="setup" class="game-container">
+            <h3>Game Mode</h3>
+            <div class="mode-selection">
+                <button class="mode-btn active" data-mode="single">1 Player</button>
+                <button class="mode-btn" data-mode="pvp">2 Players</button>
+            </div>
+
+            <div id="difficulty-section">
+                <h3>Difficulty</h3>
+                <div class="difficulty-selection">
+                    <button class="difficulty-btn" data-difficulty="easy">Easy</button>
+                    <button class="difficulty-btn active" data-difficulty="medium">Medium</button>
+                    <button class="difficulty-btn" data-difficulty="hard">Hard</button>
+                </div>
+            </div>
+
+            <button class="btn btn-success" style="margin-top: 20px; width: 100%;" onclick="startGame()">Start Game</button>
+
+            <div style="margin-top: 20px; padding: 15px; background: var(--dark-bg); border-radius: 8px;">
+                <h4 style="margin-bottom: 8px;">How to Play</h4>
+                <p style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.5;">
+                    Two cards are shown. Every pair of cards shares <strong>exactly one</strong> matching symbol.
+                    Find it and click it as fast as you can! In 1-player mode, beat the AI to the match.
+                    In 2-player mode, race your friend — the faster player scores!
+                </p>
+            </div>
+        </div>
+
+        <div id="game" class="game-container" style="display: none;">
+            <div class="game-info-bar">
+                <div class="info-item">
+                    <div class="label" id="p1-label">You</div>
+                    <div class="value" id="p1-score">0</div>
+                </div>
+                <div class="info-item">
+                    <div class="label">Time</div>
+                    <div class="value timer" id="timer">0:00</div>
+                </div>
+                <div class="info-item">
+                    <div class="label" id="p2-label">AI</div>
+                    <div class="value" id="p2-score">0</div>
+                </div>
+            </div>
+
+            <div class="round-indicator" id="round-indicator">Round 1 of 10</div>
+
+            <div class="cards-area" id="cards-area"></div>
+
+            <div id="game-status" class="game-status"></div>
+
+            <div class="btn-group" style="margin-top: 15px; justify-content: center;">
+                <button class="btn btn-secondary" onclick="backToMenu()">Quit</button>
+            </div>
+        </div>
+
+        <div class="game-container">
+            <h3>Statistics</h3>
+            <div id="stats"></div>
+        </div>
+
+        <div class="game-container">
+            <h3>High Scores</h3>
+            <div id="scores"></div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        // --- Symbols ---
+        const ALL_SYMBOLS = [
+            '🐶','🐱','🐸','🦊','🐻','🐼','🐨','🦁','🐮','🐷',
+            '🐵','🐔','🐧','🐦','🐤','🦄','🐝','🐛','🦋','🐌',
+            '🐞','🌸','🌻','🌺','🍄','🌈','⭐','🌙','☀️','⚡',
+            '❄️','🔥','💧','🍎','🍊','🍋','🍉','🍇','🍓','🍒',
+            '🎈','🎸','🎺','🎲','🚀','✈️','🚗','🏀','⚽','🎯',
+            '💎','🔔','🔑','💡','🎵','❤️','🍀'
+        ];
+
+        // --- Card generation using projective plane ---
+        function generateDeck(order) {
+            const cards = [];
+            // First card: symbols 0..order
+            cards.push(Array.from({ length: order + 1 }, (_, i) => i));
+            // Next 'order' cards
+            for (let i = 0; i < order; i++) {
+                const card = [0];
+                for (let j = 0; j < order; j++) {
+                    card.push(order + 1 + i * order + j);
+                }
+                cards.push(card);
+            }
+            // Remaining order² cards
+            for (let i = 0; i < order; i++) {
+                for (let j = 0; j < order; j++) {
+                    const card = [i + 1];
+                    for (let k = 0; k < order; k++) {
+                        card.push(order + 1 + k * order + ((i * k + j) % order));
+                    }
+                    cards.push(card);
+                }
+            }
+            return cards;
+        }
+
+        // --- Game state ---
+        let gameMode = 'single';
+        let difficulty = 'medium';
+        let deck = [];
+        let currentPairIndex = 0;
+        let totalRounds = 0;
+        let scores = { 1: 0, 2: 0 };
+        let timerInterval = null;
+        let elapsedSeconds = 0;
+        let gameActive = false;
+        let aiTimeout = null;
+        let player1Name = '';
+        let player2Name = '';
+        let inputLocked = false;
+
+        const DIFFICULTY_CONFIG = {
+            easy:   { order: 3, aiDelayMin: 4000, aiDelayMax: 6000 },
+            medium: { order: 5, aiDelayMin: 2000, aiDelayMax: 4000 },
+            hard:   { order: 7, aiDelayMin: 1000, aiDelayMax: 2000 }
+        };
+
+        // --- Setup UI ---
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                gameMode = btn.dataset.mode;
+                document.getElementById('difficulty-section').style.display =
+                    gameMode === 'single' ? '' : 'none';
+            });
+        });
+
+        document.querySelectorAll('.difficulty-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                difficulty = btn.dataset.difficulty;
+            });
+        });
+
+        // --- Game flow ---
+        function startGame() {
+            player1Name = GameUtils.playerName.get(1);
+            player2Name = gameMode === 'pvp' ? GameUtils.playerName.get(2) : 'AI';
+
+            document.getElementById('p1-label').textContent = player1Name;
+            document.getElementById('p2-label').textContent = player2Name;
+
+            const config = DIFFICULTY_CONFIG[gameMode === 'pvp' ? 'medium' : difficulty];
+            const allCards = generateDeck(config.order);
+
+            // Shuffle and pick pairs
+            const shuffled = GameUtils.shuffleArray([...allCards]);
+            totalRounds = Math.min(Math.floor(shuffled.length / 2), 15);
+            deck = shuffled.slice(0, totalRounds * 2);
+            currentPairIndex = 0;
+            scores = { 1: 0, 2: 0 };
+            elapsedSeconds = 0;
+            gameActive = true;
+            inputLocked = false;
+
+            document.getElementById('p1-score').textContent = '0';
+            document.getElementById('p2-score').textContent = '0';
+            document.getElementById('timer').textContent = '0:00';
+            document.getElementById('game-status').textContent = '';
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+
+            startTimer();
+            showCurrentPair();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                elapsedSeconds++;
+                const mins = Math.floor(elapsedSeconds / 60);
+                const secs = elapsedSeconds % 60;
+                document.getElementById('timer').textContent =
+                    `${mins}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function showCurrentPair() {
+            if (currentPairIndex >= totalRounds) {
+                endGame();
+                return;
+            }
+
+            document.getElementById('round-indicator').textContent =
+                `Round ${currentPairIndex + 1} of ${totalRounds}`;
+
+            const cardA = deck[currentPairIndex * 2];
+            const cardB = deck[currentPairIndex * 2 + 1];
+            const matchingSymbol = findMatch(cardA, cardB);
+
+            const area = document.getElementById('cards-area');
+            area.innerHTML = '';
+
+            const wrapperA = createCardElement(cardA, 'left', matchingSymbol);
+            const wrapperB = createCardElement(cardB, 'right', matchingSymbol);
+            area.appendChild(wrapperA);
+            area.appendChild(wrapperB);
+
+            inputLocked = false;
+
+            // AI opponent in single player
+            if (gameMode === 'single') {
+                scheduleAI(matchingSymbol);
+            }
+        }
+
+        function findMatch(cardA, cardB) {
+            for (const sym of cardA) {
+                if (cardB.includes(sym)) return sym;
+            }
+            return null;
+        }
+
+        function getCardSize() {
+            const w = window.innerWidth;
+            if (w <= 400) return 160;
+            if (w <= 640) return 200;
+            return 280;
+        }
+
+        function getSymbolPositions(count) {
+            // Pre-defined positions within a unit circle (center 0.5, 0.5, radius ~0.4)
+            // Each position: { x, y, size, rotation }
+            const layouts = {
+                4: [
+                    { x: 0.5, y: 0.28, size: 0.22, rotation: -15 },
+                    { x: 0.28, y: 0.62, size: 0.19, rotation: 10 },
+                    { x: 0.72, y: 0.55, size: 0.24, rotation: -5 },
+                    { x: 0.5, y: 0.78, size: 0.17, rotation: 20 },
+                ],
+                6: [
+                    { x: 0.5, y: 0.22, size: 0.18, rotation: -10 },
+                    { x: 0.27, y: 0.38, size: 0.15, rotation: 15 },
+                    { x: 0.73, y: 0.35, size: 0.20, rotation: -20 },
+                    { x: 0.35, y: 0.62, size: 0.17, rotation: 5 },
+                    { x: 0.68, y: 0.65, size: 0.14, rotation: -8 },
+                    { x: 0.5, y: 0.80, size: 0.16, rotation: 12 },
+                ],
+                8: [
+                    { x: 0.5, y: 0.18, size: 0.14, rotation: -12 },
+                    { x: 0.28, y: 0.30, size: 0.12, rotation: 18 },
+                    { x: 0.72, y: 0.28, size: 0.15, rotation: -5 },
+                    { x: 0.20, y: 0.55, size: 0.13, rotation: 8 },
+                    { x: 0.50, y: 0.48, size: 0.16, rotation: -15 },
+                    { x: 0.80, y: 0.52, size: 0.11, rotation: 22 },
+                    { x: 0.35, y: 0.75, size: 0.14, rotation: -8 },
+                    { x: 0.65, y: 0.78, size: 0.12, rotation: 10 },
+                ]
+            };
+
+            const base = layouts[count] || layouts[6];
+            // Add slight random jitter to rotation each round
+            return base.map(p => ({
+                ...p,
+                rotation: p.rotation + (Math.random() * 20 - 10)
+            }));
+        }
+
+        function onSymbolClick(symIndex, el) {
+            if (!gameActive || inputLocked) return;
+
+            const cardA = deck[currentPairIndex * 2];
+            const cardB = deck[currentPairIndex * 2 + 1];
+            const matchingSym = findMatch(cardA, cardB);
+
+            if (symIndex === matchingSym) {
+                inputLocked = true;
+                clearTimeout(aiTimeout);
+                scores[1]++;
+                document.getElementById('p1-score').textContent = scores[1];
+
+                // Animate match
+                highlightMatch(symIndex);
+                showFlash('+1', true);
+
+                setTimeout(() => {
+                    currentPairIndex++;
+                    showCurrentPair();
+                }, 700);
+            } else {
+                // Wrong - shake the card
+                const card = el.closest('.spot-card');
+                card.classList.add('shake', 'wrong');
+                showFlash('Miss!', false);
+                setTimeout(() => {
+                    card.classList.remove('shake', 'wrong');
+                }, 500);
+            }
+        }
+
+        function highlightMatch(symIndex) {
+            document.querySelectorAll('.spot-card').forEach(card => {
+                card.classList.add('correct');
+                card.querySelectorAll('.symbol').forEach(s => {
+                    if (parseInt(s.dataset.symbolIndex) === symIndex) {
+                        s.classList.add('matched');
+                    }
+                });
+            });
+        }
+
+        function showFlash(text, isGood) {
+            const flash = document.createElement('div');
+            flash.className = isGood ? 'bonus-flash' : 'penalty-flash';
+            flash.textContent = text;
+            document.body.appendChild(flash);
+            setTimeout(() => flash.remove(), 800);
+        }
+
+        // --- AI ---
+        function scheduleAI(matchingSymbol) {
+            clearTimeout(aiTimeout);
+            const config = DIFFICULTY_CONFIG[difficulty];
+            const delay = config.aiDelayMin + Math.random() * (config.aiDelayMax - config.aiDelayMin);
+
+            aiTimeout = setTimeout(() => {
+                if (!gameActive || inputLocked) return;
+                inputLocked = true;
+
+                // AI found it
+                scores[2]++;
+                document.getElementById('p2-score').textContent = scores[2];
+                highlightMatch(matchingSymbol);
+                showFlash('AI got it!', false);
+
+                setTimeout(() => {
+                    currentPairIndex++;
+                    showCurrentPair();
+                }, 700);
+            }, delay);
+        }
+
+        // In PVP mode, left card = P1, right card = P2
+        function onSymbolClickPVP(symIndex, el) {
+            if (!gameActive || inputLocked) return;
+
+            const cardA = deck[currentPairIndex * 2];
+            const cardB = deck[currentPairIndex * 2 + 1];
+            const matchingSym = findMatch(cardA, cardB);
+
+            if (symIndex === matchingSym) {
+                inputLocked = true;
+                const side = el.closest('.spot-card').dataset.side;
+                const player = side === 'left' ? 1 : 2;
+                scores[player]++;
+                document.getElementById(`p${player}-score`).textContent = scores[player];
+
+                highlightMatch(symIndex);
+                const name = player === 1 ? player1Name : player2Name;
+                showFlash(`${name}!`, true);
+
+                setTimeout(() => {
+                    currentPairIndex++;
+                    showCurrentPair();
+                }, 700);
+            } else {
+                const card = el.closest('.spot-card');
+                card.classList.add('shake', 'wrong');
+                showFlash('Miss!', false);
+                setTimeout(() => {
+                    card.classList.remove('shake', 'wrong');
+                }, 500);
+            }
+        }
+
+        function createCardElement(cardSymbols, side, matchingSymbol) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'card-wrapper';
+
+            const card = document.createElement('div');
+            card.className = 'spot-card';
+            card.dataset.side = side;
+
+            const positions = getSymbolPositions(cardSymbols.length);
+            const shuffledSymbols = GameUtils.shuffleArray([...cardSymbols]);
+            const cardSize = getCardSize();
+
+            shuffledSymbols.forEach((symIndex, i) => {
+                const el = document.createElement('div');
+                el.className = 'symbol';
+                el.textContent = ALL_SYMBOLS[symIndex];
+                el.dataset.symbolIndex = symIndex;
+
+                const pos = positions[i];
+                const size = pos.size * cardSize;
+                el.style.fontSize = `${size}px`;
+                el.style.left = `${pos.x * cardSize - size / 2}px`;
+                el.style.top = `${pos.y * cardSize - size / 2}px`;
+                el.style.width = `${size}px`;
+                el.style.height = `${size}px`;
+                el.style.transform = `rotate(${pos.rotation}deg)`;
+
+                el.addEventListener('click', () => {
+                    if (gameMode === 'pvp') {
+                        onSymbolClickPVP(symIndex, el);
+                    } else {
+                        onSymbolClick(symIndex, el);
+                    }
+                });
+                card.appendChild(el);
+            });
+
+            wrapper.appendChild(card);
+
+            if (gameMode === 'pvp') {
+                const label = document.createElement('div');
+                label.className = 'card-label';
+                label.textContent = side === 'left' ? player1Name : player2Name;
+                wrapper.appendChild(label);
+            }
+
+            return wrapper;
+        }
+
+        // --- End game ---
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            clearTimeout(aiTimeout);
+
+            const p1 = scores[1];
+            const p2 = scores[2];
+
+            let resultText, result;
+            if (gameMode === 'single') {
+                if (p1 > p2) {
+                    resultText = `You win! ${p1} - ${p2}`;
+                    result = 'win';
+                } else if (p2 > p1) {
+                    resultText = `AI wins! ${p2} - ${p1}`;
+                    result = 'loss';
+                } else {
+                    resultText = `It's a tie! ${p1} - ${p2}`;
+                    result = 'draw';
+                }
+            } else {
+                if (p1 > p2) {
+                    resultText = `${player1Name} wins! ${p1} - ${p2}`;
+                    result = 'win';
+                } else if (p2 > p1) {
+                    resultText = `${player2Name} wins! ${p2} - ${p1}`;
+                    result = 'loss';
+                } else {
+                    resultText = `It's a tie! ${p1} - ${p2}`;
+                    result = 'draw';
+                }
+            }
+
+            GameUtils.stats.update('spotit', result);
+
+            // Score: points * 100 - time penalty
+            const finalScore = Math.max(0, p1 * 100 - elapsedSeconds);
+            if (p1 > 0) {
+                GameUtils.highScores.add('spotit', player1Name, finalScore, {
+                    matches: p1,
+                    time: elapsedSeconds,
+                    difficulty: difficulty
+                });
+            }
+
+            GameUtils.showModal('Game Over!', resultText, [
+                { text: 'Play Again', primary: true, action: () => startGame() },
+                { text: 'Menu', action: () => backToMenu() }
+            ]);
+
+            renderStats();
+        }
+
+        function backToMenu() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            clearTimeout(aiTimeout);
+            document.getElementById('game').style.display = 'none';
+            document.getElementById('setup').style.display = 'block';
+        }
+
+        function renderStats() {
+            GameUtils.renderStats('spotit', 'stats');
+            GameUtils.renderHighScores('spotit', 'scores');
+        }
+
+        // Init
+        renderStats();
+    </script>
+</body>
+</html>

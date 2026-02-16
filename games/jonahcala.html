@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mancala - Game Arcade</title>
+    <title>Jonahcala - Game Arcade</title>
     <link rel="stylesheet" href="../css/styles.css">
 </head>
 <body>
     <div class="container">
         <div class="game-header">
-            <h1>Mancala</h1>
+            <h1>Jonahcala</h1>
             <a href="../index.html" class="back-btn">&#8592; Back to Games</a>
         </div>
 
@@ -36,9 +36,9 @@
                 <ul style="color: var(--text-secondary); font-size: 0.9rem; padding-left: 20px;">
                     <li>Click a pit on your side to pick up all stones</li>
                     <li>Stones are distributed counter-clockwise, one per pit</li>
-                    <li>If your last stone lands in your store, you go again</li>
-                    <li>If your last stone lands in an empty pit on your side, capture that stone and all stones in the opposite pit</li>
-                    <li>Game ends when one side is empty - remaining stones go to that player's opponent</li>
+                    <li>If your last stone lands in a pit with stones, pick them all up and keep sowing</li>
+                    <li>Your turn ends when your last stone lands in your store or an empty pit</li>
+                    <li>Game ends when one side is empty - remaining stones go to the opponent</li>
                 </ul>
             </div>
         </div>
@@ -110,7 +110,7 @@
                 });
             });
 
-            GameUtils.renderStats('mancala', 'stats');
+            GameUtils.renderStats('jonahcala', 'stats');
         }
 
         function startGame() {
@@ -132,7 +132,6 @@
         }
 
         function resetGame() {
-            // Initialize with 4 stones in each pit
             pits = [4, 4, 4, 4, 4, 4, 0, 4, 4, 4, 4, 4, 4, 0];
             currentPlayer = 1;
             gameActive = true;
@@ -213,40 +212,44 @@
 
             isAnimating = true;
 
-            let stones = pits[pitIndex];
-            pits[pitIndex] = 0;
-            let currentIndex = pitIndex;
+            const ownStore = currentPlayer === 1 ? 6 : 13;
             const opponentStore = currentPlayer === 1 ? 13 : 6;
 
-            // Distribute stones
-            while (stones > 0) {
-                currentIndex = (currentIndex + 1) % 14;
+            let currentIndex = pitIndex;
 
-                // Skip opponent's store
-                if (currentIndex === opponentStore) continue;
+            // Relay sowing: keep picking up and sowing until landing in store or empty pit
+            while (true) {
+                let stones = pits[currentIndex];
+                pits[currentIndex] = 0;
 
-                pits[currentIndex]++;
-                stones--;
+                // Distribute stones
+                while (stones > 0) {
+                    currentIndex = (currentIndex + 1) % 14;
 
-                renderBoard();
-                await GameUtils.delay(150);
-            }
+                    // Skip opponent's store
+                    if (currentIndex === opponentStore) continue;
 
-            // Check for capture
-            const ownStore = currentPlayer === 1 ? 6 : 13;
-            const ownPitsStart = currentPlayer === 1 ? 0 : 7;
-            const ownPitsEnd = currentPlayer === 1 ? 5 : 12;
+                    pits[currentIndex]++;
+                    stones--;
 
-            if (currentIndex >= ownPitsStart && currentIndex <= ownPitsEnd && pits[currentIndex] === 1) {
-                // Landed in own empty pit - capture!
-                const oppositeIndex = 12 - currentIndex;
-                if (pits[oppositeIndex] > 0) {
-                    pits[ownStore] += pits[currentIndex] + pits[oppositeIndex];
-                    pits[currentIndex] = 0;
-                    pits[oppositeIndex] = 0;
                     renderBoard();
-                    await GameUtils.delay(300);
+                    await GameUtils.delay(150);
                 }
+
+                // Check where the last stone landed
+                // If it landed in own store, turn ends (landed in store)
+                if (currentIndex === ownStore) {
+                    break;
+                }
+
+                // If it landed in an empty pit (the stone we just placed is the only one), turn ends
+                if (pits[currentIndex] === 1) {
+                    break;
+                }
+
+                // Otherwise, pick up all stones from that pit and continue sowing
+                renderBoard();
+                await GameUtils.delay(300);
             }
 
             // Check if game is over
@@ -256,10 +259,8 @@
                 return;
             }
 
-            // Check if player gets another turn (landed in own store)
-            if (currentIndex !== ownStore) {
-                currentPlayer = currentPlayer === 1 ? 2 : 1;
-            }
+            // Turn always passes to the other player in Jonahcala
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
 
             isAnimating = false;
             renderBoard();
@@ -303,25 +304,25 @@
                 statusEl.textContent = `${player1Name} wins! (${pits[6]} - ${pits[13]})`;
                 statusEl.classList.add('winner');
                 if (gameMode === 'ai') {
-                    GameUtils.stats.update('mancala', 'win');
-                    GameUtils.highScores.add('mancala', player1Name, pits[6], { opponent: pits[13] });
+                    GameUtils.stats.update('jonahcala', 'win');
+                    GameUtils.highScores.add('jonahcala', player1Name, pits[6], { opponent: pits[13] });
                 } else {
-                    GameUtils.stats.update('mancala', 'win');
+                    GameUtils.stats.update('jonahcala', 'win');
                 }
             } else if (pits[13] > pits[6]) {
                 statusEl.textContent = `${player2Name} wins! (${pits[13]} - ${pits[6]})`;
                 statusEl.classList.add('winner');
                 if (gameMode === 'ai') {
-                    GameUtils.stats.update('mancala', 'loss');
+                    GameUtils.stats.update('jonahcala', 'loss');
                 } else {
-                    GameUtils.stats.update('mancala', 'win');
+                    GameUtils.stats.update('jonahcala', 'win');
                 }
             } else {
                 statusEl.textContent = `It's a tie! (${pits[6]} - ${pits[13]})`;
-                GameUtils.stats.update('mancala', 'draw');
+                GameUtils.stats.update('jonahcala', 'draw');
             }
 
-            GameUtils.renderStats('mancala', 'stats');
+            GameUtils.renderStats('jonahcala', 'stats');
         }
 
         function updateStatus() {
@@ -329,6 +330,30 @@
             statusEl.classList.remove('winner');
             const playerName = currentPlayer === 1 ? player1Name : player2Name;
             statusEl.textContent = `${playerName}'s turn`;
+        }
+
+        // Simulate a move without animation to evaluate outcome
+        function simulateMove(pitsCopy, pitIndex, player) {
+            const ownStore = player === 1 ? 6 : 13;
+            const opponentStore = player === 1 ? 13 : 6;
+            let currentIndex = pitIndex;
+
+            while (true) {
+                let stones = pitsCopy[currentIndex];
+                pitsCopy[currentIndex] = 0;
+
+                while (stones > 0) {
+                    currentIndex = (currentIndex + 1) % 14;
+                    if (currentIndex === opponentStore) continue;
+                    pitsCopy[currentIndex]++;
+                    stones--;
+                }
+
+                if (currentIndex === ownStore) break;
+                if (pitsCopy[currentIndex] === 1) break;
+            }
+
+            return pitsCopy;
         }
 
         async function aiMove() {
@@ -366,45 +391,44 @@
                 if (pits[i] > 0) available.push(i);
             }
 
-            // Priority 1: Move that lands in store (extra turn)
-            for (const pit of available) {
-                const stones = pits[pit];
-                let endIndex = pit + stones;
-
-                // Account for skipping player 1's store
-                if (pit + stones >= 6 && pit + stones < 13) {
-                    endIndex++;
-                }
-                endIndex = endIndex % 14;
-
-                if (endIndex === 13) return pit;
-            }
-
-            // Priority 2: Capture move
-            for (const pit of available) {
-                const stones = pits[pit];
-                let endIndex = pit;
-                let remaining = stones;
-
-                while (remaining > 0) {
-                    endIndex = (endIndex + 1) % 14;
-                    if (endIndex === 6) continue; // Skip opponent store
-                    remaining--;
-                }
-
-                if (endIndex >= 7 && endIndex <= 12 && pits[endIndex] === 0) {
-                    const opposite = 12 - endIndex;
-                    if (pits[opposite] > 0) return pit;
-                }
-            }
-
-            // Priority 3: Move that gives the most stones
             let bestMove = available[0];
-            let maxStones = -1;
+            let bestScore = -Infinity;
 
             for (const pit of available) {
-                if (pits[pit] > maxStones) {
-                    maxStones = pits[pit];
+                const pitsCopy = [...pits];
+                simulateMove(pitsCopy, pit, 2);
+
+                // Score = AI store - Player store + positional advantage
+                let score = pitsCopy[13] - pitsCopy[6];
+
+                // Bonus for ending in store (lands in store)
+                const ownStore = 13;
+                // Simulate to check where last stone lands
+                const testPits = [...pits];
+                let currentIndex = pit;
+                let ended = false;
+                while (true) {
+                    let stones = testPits[currentIndex];
+                    testPits[currentIndex] = 0;
+                    while (stones > 0) {
+                        currentIndex = (currentIndex + 1) % 14;
+                        if (currentIndex === 6) continue;
+                        testPits[currentIndex]++;
+                        stones--;
+                    }
+                    if (currentIndex === 13) { ended = true; break; }
+                    if (testPits[currentIndex] === 1) break;
+                }
+
+                // Prefer moves that end in store (though turn passes regardless)
+                if (ended) score += 2;
+
+                // Prefer keeping stones on own side
+                const ownStones = pitsCopy.slice(7, 13).reduce((a, b) => a + b, 0);
+                score += ownStones * 0.1;
+
+                if (score > bestScore) {
+                    bestScore = score;
                     bestMove = pit;
                 }
             }
