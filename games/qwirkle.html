@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Qwirkle - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .game-layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .board-area {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .score-sidebar {
+            width: 200px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .score-sidebar h3 {
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .score-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .score-entry.active {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .score-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .board-wrapper {
+            width: 100%;
+            height: 500px;
+            overflow: auto;
+            background: var(--card-bg);
+            border-radius: 12px;
+            position: relative;
+            touch-action: pan-x pan-y;
+        }
+
+        .board-inner {
+            position: relative;
+            min-width: 100%;
+            min-height: 100%;
+        }
+
+        .board-cell {
+            position: absolute;
+            width: 54px;
+            height: 54px;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: default;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .board-cell.valid-target {
+            border: 2px dashed var(--primary-color);
+            background: rgba(99, 102, 241, 0.1);
+            cursor: pointer;
+        }
+
+        .board-cell.valid-target:hover {
+            background: rgba(99, 102, 241, 0.25);
+        }
+
+        .board-cell.pending {
+            border: 2px solid var(--success-color);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+
+        .tile {
+            width: 48px;
+            height: 48px;
+            border-radius: 6px;
+            background: #2a2a3e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #3a3a50;
+        }
+
+        .tile svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .hand-area {
+            margin-top: 15px;
+            padding: 15px;
+            background: var(--card-bg);
+            border-radius: 12px;
+        }
+
+        .hand-label {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .hand-tiles {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .hand-tile {
+            width: 54px;
+            height: 54px;
+            border-radius: 8px;
+            background: #2a2a3e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid #3a3a50;
+            transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+            touch-action: manipulation;
+        }
+
+        .hand-tile:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary-color);
+        }
+
+        .hand-tile.selected {
+            transform: translateY(-6px);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+        }
+
+        .hand-tile.swap-selected {
+            transform: translateY(-6px);
+            border-color: var(--warning-color);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.5);
+        }
+
+        .hand-tile svg {
+            width: 34px;
+            height: 34px;
+        }
+
+        .turn-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .bag-count {
+            text-align: center;
+            margin-top: 10px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .turn-indicator {
+            text-align: center;
+            padding: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background: var(--card-bg);
+        }
+
+        .last-move-info {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin-top: 5px;
+            min-height: 1.2em;
+        }
+
+        .hidden-hand {
+            filter: blur(8px);
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .reveal-btn {
+            display: none;
+            margin: 10px auto;
+        }
+
+        @media (max-width: 768px) {
+            .game-layout {
+                flex-direction: column;
+            }
+            .score-sidebar {
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: center;
+            }
+            .score-sidebar h3 {
+                width: 100%;
+            }
+            .score-entry {
+                border-bottom: none;
+                gap: 8px;
+            }
+            .board-wrapper {
+                height: 400px;
+            }
+            .hand-tile {
+                width: 48px;
+                height: 48px;
+            }
+            .hand-tile svg {
+                width: 30px;
+                height: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="../index.html" class="back-link">← Back to Games</a>
+        <h1>Qwirkle</h1>
+    </header>
+
+    <div class="container">
+        <div id="menu" class="game-container">
+            <h2 style="margin-bottom: 20px;">Game Setup</h2>
+
+            <div class="form-group">
+                <label>Game Mode</label>
+                <div class="btn-group">
+                    <button class="btn mode-btn active" data-mode="1p">1 Player</button>
+                    <button class="btn mode-btn" data-mode="2p">2 Players</button>
+                </div>
+            </div>
+
+            <div id="difficultyGroup" class="form-group">
+                <label>AI Difficulty</label>
+                <div class="btn-group">
+                    <button class="btn diff-btn" data-diff="easy">Easy</button>
+                    <button class="btn diff-btn active" data-diff="medium">Medium</button>
+                    <button class="btn diff-btn" data-diff="hard">Hard</button>
+                </div>
+            </div>
+
+            <button class="btn btn-success btn-large" onclick="startGame()" style="width:100%; margin-top:20px;">Start Game</button>
+
+            <div id="highScoresList" style="margin-top: 20px;"></div>
+        </div>
+
+        <div id="gameArea" style="display:none;">
+            <div class="turn-indicator" id="turnIndicator">Player 1's Turn</div>
+            <div class="last-move-info" id="lastMoveInfo"></div>
+
+            <div class="game-layout">
+                <div class="board-area">
+                    <div class="board-wrapper" id="boardWrapper">
+                        <div class="board-inner" id="boardInner"></div>
+                    </div>
+
+                    <div class="hand-area">
+                        <div class="hand-label" id="handLabel">Your Hand</div>
+                        <div class="hand-tiles" id="handTiles"></div>
+                        <button class="btn btn-success reveal-btn" id="revealBtn" onclick="revealHand()">Reveal Hand</button>
+                        <div class="turn-controls" id="turnControls">
+                            <button class="btn btn-success" id="confirmBtn" onclick="confirmTurn()" disabled>Confirm</button>
+                            <button class="btn btn-warning" id="undoBtn" onclick="undoPlacements()" disabled>Undo</button>
+                            <button class="btn" id="swapBtn" onclick="toggleSwapMode()">Swap</button>
+                        </div>
+                        <div class="bag-count" id="bagCount">Tiles in bag: 108</div>
+                    </div>
+                </div>
+
+                <div class="score-sidebar">
+                    <h3>Scores</h3>
+                    <div id="scoreEntries"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+    // ===== CONSTANTS =====
+    const SHAPES = ['circle', 'diamond', 'square', 'star6', 'clover', 'cross'];
+    const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7'];
+    const COLOR_NAMES = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple'];
+    const CELL_SIZE = 56;
+    const BOARD_PADDING = 200;
+
+    // ===== SVG SHAPE PATHS =====
+    function shapeSVG(shapeIdx, colorIdx) {
+        const color = COLORS[colorIdx];
+        const shape = SHAPES[shapeIdx];
+        let path;
+        switch (shape) {
+            case 'circle':
+                path = `<circle cx="16" cy="16" r="12" fill="${color}"/>`;
+                break;
+            case 'diamond':
+                path = `<polygon points="16,2 30,16 16,30 2,16" fill="${color}"/>`;
+                break;
+            case 'square':
+                path = `<rect x="4" y="4" width="24" height="24" rx="2" fill="${color}"/>`;
+                break;
+            case 'star6':
+                path = `<polygon points="16,2 19.5,10.5 28.5,10.5 21.5,16.5 24,25.5 16,20 8,25.5 10.5,16.5 3.5,10.5 12.5,10.5" fill="${color}"/>`;
+                break;
+            case 'clover':
+                path = `<circle cx="16" cy="9" r="6" fill="${color}"/><circle cx="9" cy="19" r="6" fill="${color}"/><circle cx="23" cy="19" r="6" fill="${color}"/><circle cx="16" cy="16" r="4" fill="${color}"/>`;
+                break;
+            case 'cross':
+                path = `<rect x="10" y="2" width="12" height="28" rx="2" fill="${color}"/><rect x="2" y="10" width="28" height="12" rx="2" fill="${color}"/>`;
+                break;
+        }
+        return `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">${path}</svg>`;
+    }
+
+    // ===== GAME STATE =====
+    let board = new Map(); // "r,c" -> {shape, color}
+    let bag = [];
+    let hands = [[], []];
+    let scores = [0, 0];
+    let currentPlayer = 0; // 0 or 1
+    let pendingPlacements = []; // [{row, col, tile}]
+    let selectedHandIndex = -1;
+    let swapMode = false;
+    let swapSelected = new Set();
+    let gameMode = '1p';
+    let difficulty = 'medium';
+    let gameOver = false;
+    let handHidden = false;
+    let boardMinRow = 0, boardMaxRow = 0, boardMinCol = 0, boardMaxCol = 0;
+    let consecutivePasses = 0;
+
+    // ===== MENU =====
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            gameMode = btn.dataset.mode;
+            document.getElementById('difficultyGroup').style.display = gameMode === '1p' ? '' : 'none';
+        });
+    });
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            difficulty = btn.dataset.diff;
+        });
+    });
+
+    function loadHighScores() {
+        const scores = GameUtils.highScores.get('qwirkle');
+        const container = document.getElementById('highScoresList');
+        if (scores.length === 0) { container.innerHTML = ''; return; }
+        container.innerHTML = '<h3 style="margin-bottom:10px;">High Scores</h3>' +
+            '<table class="high-scores-table"><thead><tr><th>#</th><th>Player</th><th>Score</th></tr></thead><tbody>' +
+            scores.slice(0, 5).map((s, i) => `<tr><td>${i+1}</td><td>${GameUtils.escapeHtml(s.player)}</td><td>${s.score}</td></tr>`).join('') +
+            '</tbody></table>';
+    }
+    loadHighScores();
+
+    // ===== GAME INIT =====
+    function startGame() {
+        board = new Map();
+        bag = [];
+        pendingPlacements = [];
+        selectedHandIndex = -1;
+        swapMode = false;
+        swapSelected = new Set();
+        gameOver = false;
+        handHidden = false;
+        consecutivePasses = 0;
+        scores = [0, 0];
+        currentPlayer = 0;
+        boardMinRow = 0; boardMaxRow = 0; boardMinCol = 0; boardMaxCol = 0;
+
+        // Create 108 tiles: 6 shapes x 6 colors x 3 copies
+        for (let s = 0; s < 6; s++) {
+            for (let c = 0; c < 6; c++) {
+                for (let d = 0; d < 3; d++) {
+                    bag.push({ shape: s, color: c });
+                }
+            }
+        }
+        shuffle(bag);
+
+        hands = [[], []];
+        for (let p = 0; p < 2; p++) {
+            for (let i = 0; i < 6; i++) {
+                if (bag.length > 0) hands[p].push(bag.pop());
+            }
+        }
+
+        document.getElementById('menu').style.display = 'none';
+        document.getElementById('gameArea').style.display = '';
+
+        updateScoreSidebar();
+        renderBoard();
+        renderHand();
+        updateTurnIndicator();
+        updateBagCount();
+        document.getElementById('lastMoveInfo').textContent = '';
+    }
+
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    }
+
+    // ===== BOARD RENDERING =====
+    function getBoardBounds() {
+        let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+        for (const key of board.keys()) {
+            const [r, c] = key.split(',').map(Number);
+            minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+            minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+        }
+        for (const p of pendingPlacements) {
+            minR = Math.min(minR, p.row); maxR = Math.max(maxR, p.row);
+            minC = Math.min(minC, p.col); maxC = Math.max(maxC, p.col);
+        }
+        if (minR === Infinity) { minR = 0; maxR = 0; minC = 0; maxC = 0; }
+        return { minR: minR - 3, maxR: maxR + 3, minC: minC - 3, maxC: maxC + 3 };
+    }
+
+    function renderBoard() {
+        const inner = document.getElementById('boardInner');
+        const bounds = getBoardBounds();
+        const validCells = getValidPlacements();
+
+        const width = (bounds.maxC - bounds.minC + 1) * CELL_SIZE + BOARD_PADDING * 2;
+        const height = (bounds.maxR - bounds.minR + 1) * CELL_SIZE + BOARD_PADDING * 2;
+        inner.style.width = width + 'px';
+        inner.style.height = height + 'px';
+
+        let html = '';
+
+        // Render placed tiles
+        for (const [key, tile] of board.entries()) {
+            const [r, c] = key.split(',').map(Number);
+            const x = (c - bounds.minC) * CELL_SIZE + BOARD_PADDING;
+            const y = (r - bounds.minR) * CELL_SIZE + BOARD_PADDING;
+            html += `<div class="board-cell" style="left:${x}px;top:${y}px;">
+                <div class="tile">${shapeSVG(tile.shape, tile.color)}</div>
+            </div>`;
+        }
+
+        // Render pending placements
+        for (const p of pendingPlacements) {
+            const x = (p.col - bounds.minC) * CELL_SIZE + BOARD_PADDING;
+            const y = (p.row - bounds.minR) * CELL_SIZE + BOARD_PADDING;
+            html += `<div class="board-cell pending" style="left:${x}px;top:${y}px;">
+                <div class="tile">${shapeSVG(p.tile.shape, p.tile.color)}</div>
+            </div>`;
+        }
+
+        // Render valid target cells
+        if (selectedHandIndex >= 0 && !swapMode) {
+            const tile = hands[currentPlayer][selectedHandIndex];
+            for (const pos of validCells) {
+                if (canPlaceTileAt(tile, pos.row, pos.col)) {
+                    const x = (pos.col - bounds.minC) * CELL_SIZE + BOARD_PADDING;
+                    const y = (pos.row - bounds.minR) * CELL_SIZE + BOARD_PADDING;
+                    html += `<div class="board-cell valid-target" style="left:${x}px;top:${y}px;" onclick="placeTile(${pos.row},${pos.col})"></div>`;
+                }
+            }
+        }
+
+        inner.innerHTML = html;
+    }
+
+    // ===== HAND RENDERING =====
+    function renderHand() {
+        const container = document.getElementById('handTiles');
+        const hand = hands[currentPlayer];
+        let html = '';
+        for (let i = 0; i < hand.length; i++) {
+            const tile = hand[i];
+            let cls = 'hand-tile';
+            if (swapMode && swapSelected.has(i)) cls += ' swap-selected';
+            else if (i === selectedHandIndex) cls += ' selected';
+            html += `<div class="${cls}" onclick="selectHandTile(${i})">${shapeSVG(tile.shape, tile.color)}</div>`;
+        }
+        container.innerHTML = html;
+
+        if (handHidden) {
+            container.classList.add('hidden-hand');
+            document.getElementById('revealBtn').style.display = 'block';
+        } else {
+            container.classList.remove('hidden-hand');
+            document.getElementById('revealBtn').style.display = 'none';
+        }
+
+        const playerName = getPlayerName(currentPlayer);
+        document.getElementById('handLabel').textContent = `${playerName}'s Hand`;
+
+        // Update button states
+        document.getElementById('confirmBtn').disabled = pendingPlacements.length === 0 && !(swapMode && swapSelected.size > 0);
+        document.getElementById('undoBtn').disabled = pendingPlacements.length === 0;
+        document.getElementById('swapBtn').textContent = swapMode ? 'Cancel Swap' : 'Swap';
+        document.getElementById('swapBtn').disabled = pendingPlacements.length > 0;
+    }
+
+    function getPlayerName(idx) {
+        if (gameMode === '1p') {
+            return idx === 0 ? GameUtils.playerName.get(1) : 'Computer';
+        }
+        return GameUtils.playerName.get(idx + 1);
+    }
+
+    // ===== TILE SELECTION & PLACEMENT =====
+    function selectHandTile(idx) {
+        if (handHidden || gameOver) return;
+        if (swapMode) {
+            if (swapSelected.has(idx)) swapSelected.delete(idx);
+            else swapSelected.add(idx);
+            renderHand();
+            document.getElementById('confirmBtn').disabled = swapSelected.size === 0;
+            return;
+        }
+        selectedHandIndex = (selectedHandIndex === idx) ? -1 : idx;
+        renderBoard();
+        renderHand();
+    }
+
+    function placeTile(row, col) {
+        if (selectedHandIndex < 0 || gameOver || handHidden) return;
+        const tile = hands[currentPlayer][selectedHandIndex];
+
+        pendingPlacements.push({ row, col, tile });
+        // Temporarily add to board for validation of next placements
+        board.set(`${row},${col}`, tile);
+        hands[currentPlayer].splice(selectedHandIndex, 1);
+        selectedHandIndex = -1;
+
+        renderBoard();
+        renderHand();
+    }
+
+    function undoPlacements() {
+        if (gameOver) return;
+        for (const p of pendingPlacements) {
+            board.delete(`${p.row},${p.col}`);
+            hands[currentPlayer].push(p.tile);
+        }
+        pendingPlacements = [];
+        selectedHandIndex = -1;
+        renderBoard();
+        renderHand();
+    }
+
+    function toggleSwapMode() {
+        if (gameOver || pendingPlacements.length > 0) return;
+        swapMode = !swapMode;
+        swapSelected = new Set();
+        selectedHandIndex = -1;
+        renderBoard();
+        renderHand();
+    }
+
+    // ===== VALIDATION =====
+    function getValidPlacements() {
+        const positions = new Set();
+
+        if (board.size === 0 && pendingPlacements.length === 0) {
+            positions.add('0,0');
+            return [{ row: 0, col: 0 }];
+        }
+
+        // All cells adjacent to existing tiles
+        for (const key of board.keys()) {
+            const [r, c] = key.split(',').map(Number);
+            for (const [dr, dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+                const nk = `${r+dr},${c+dc}`;
+                if (!board.has(nk)) positions.add(nk);
+            }
+        }
+
+        const result = [];
+        for (const pos of positions) {
+            const [r, c] = pos.split(',').map(Number);
+            result.push({ row: r, col: c });
+        }
+        return result;
+    }
+
+    function canPlaceTileAt(tile, row, col) {
+        const key = `${row},${col}`;
+        if (board.has(key)) return false;
+
+        // Must be adjacent to existing tile (unless first tile)
+        if (board.size > 0) {
+            let hasAdj = false;
+            for (const [dr, dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+                if (board.has(`${row+dr},${col+dc}`)) { hasAdj = true; break; }
+            }
+            if (!hasAdj) return false;
+        }
+
+        // Must align with pending placements
+        if (pendingPlacements.length > 0) {
+            const allRows = pendingPlacements.map(p => p.row);
+            const allCols = pendingPlacements.map(p => p.col);
+            const sameRow = allRows.every(r => r === allRows[0]);
+            const sameCol = allCols.every(c => c === allCols[0]);
+
+            if (pendingPlacements.length === 1) {
+                // Second tile must be same row or col as first
+                if (row !== allRows[0] && col !== allCols[0]) return false;
+            } else if (sameRow) {
+                if (row !== allRows[0]) return false;
+            } else if (sameCol) {
+                if (col !== allCols[0]) return false;
+            }
+        }
+
+        // Temporarily place to check line validity
+        board.set(key, tile);
+        const valid = checkLinesValid(row, col);
+        board.delete(key);
+        return valid;
+    }
+
+    function checkLinesValid(row, col) {
+        // Check horizontal line
+        const hLine = getLine(row, col, 0, 1);
+        if (!isLineValid(hLine)) return false;
+
+        // Check vertical line
+        const vLine = getLine(row, col, 1, 0);
+        if (!isLineValid(vLine)) return false;
+
+        return true;
+    }
+
+    function getLine(row, col, dr, dc) {
+        const tiles = [];
+        // Go backward
+        let r = row - dr, c = col - dc;
+        while (board.has(`${r},${c}`)) {
+            tiles.unshift(board.get(`${r},${c}`));
+            r -= dr; c -= dc;
+        }
+        // Add center
+        tiles.push(board.get(`${row},${col}`));
+        // Go forward
+        r = row + dr; c = col + dc;
+        while (board.has(`${r},${c}`)) {
+            tiles.push(board.get(`${r},${c}`));
+            r += dr; c += dc;
+        }
+        return tiles;
+    }
+
+    function isLineValid(tiles) {
+        if (tiles.length <= 1) return true;
+        if (tiles.length > 6) return false;
+
+        // All must share shape or color
+        const sameShape = tiles.every(t => t.shape === tiles[0].shape);
+        const sameColor = tiles.every(t => t.color === tiles[0].color);
+        if (!sameShape && !sameColor) return false;
+
+        // No duplicates
+        const seen = new Set();
+        for (const t of tiles) {
+            const id = `${t.shape},${t.color}`;
+            if (seen.has(id)) return false;
+            seen.add(id);
+        }
+        return true;
+    }
+
+    // ===== SCORING =====
+    function scorePendingPlacements() {
+        let total = 0;
+        const scoredLines = new Set();
+
+        for (const p of pendingPlacements) {
+            // Horizontal line
+            const hLine = getLine(p.row, p.col, 0, 1);
+            if (hLine.length > 1) {
+                const hKey = `h${p.row},${getLineStart(p.row, p.col, 0, 1)}`;
+                if (!scoredLines.has(hKey)) {
+                    scoredLines.add(hKey);
+                    total += hLine.length;
+                    if (hLine.length === 6) total += 6; // Qwirkle bonus
+                }
+            }
+
+            // Vertical line
+            const vLine = getLine(p.row, p.col, 1, 0);
+            if (vLine.length > 1) {
+                const vKey = `v${getLineStart(p.row, p.col, 1, 0)},${p.col}`;
+                if (!scoredLines.has(vKey)) {
+                    scoredLines.add(vKey);
+                    total += vLine.length;
+                    if (vLine.length === 6) total += 6; // Qwirkle bonus
+                }
+            }
+        }
+
+        // If only one tile placed and it forms no lines, it scores 1
+        if (total === 0 && pendingPlacements.length === 1) {
+            total = 1;
+        }
+
+        return total;
+    }
+
+    function getLineStart(row, col, dr, dc) {
+        let r = row, c = col;
+        while (board.has(`${r-dr},${c-dc}`)) { r -= dr; c -= dc; }
+        return `${r},${c}`;
+    }
+
+    // ===== TURN MANAGEMENT =====
+    function confirmTurn() {
+        if (gameOver) return;
+
+        if (swapMode && swapSelected.size > 0) {
+            doSwap();
+            return;
+        }
+
+        if (pendingPlacements.length === 0) return;
+
+        // Validate all pending placements form a contiguous line
+        if (!validatePendingContiguous()) {
+            GameUtils.showModal('Invalid Move', 'Placed tiles must form a contiguous line with no gaps.', [
+                { text: 'OK', primary: true }
+            ]);
+            return;
+        }
+
+        const pts = scorePendingPlacements();
+        scores[currentPlayer] += pts;
+        consecutivePasses = 0;
+
+        const playerName = getPlayerName(currentPlayer);
+        const qwirkle = pts >= 12 ? ' QWIRKLE!' : '';
+        document.getElementById('lastMoveInfo').textContent = `${playerName} scored ${pts} points!${qwirkle}`;
+
+        // Draw tiles
+        drawTiles(currentPlayer);
+
+        pendingPlacements = [];
+        selectedHandIndex = -1;
+
+        // Check game end
+        if (checkGameEnd(currentPlayer)) return;
+
+        switchTurn();
+    }
+
+    function validatePendingContiguous() {
+        if (pendingPlacements.length <= 1) return true;
+
+        const allRows = pendingPlacements.map(p => p.row);
+        const allCols = pendingPlacements.map(p => p.col);
+        const sameRow = allRows.every(r => r === allRows[0]);
+        const sameCol = allCols.every(c => c === allCols[0]);
+
+        if (!sameRow && !sameCol) return false;
+
+        if (sameRow) {
+            const row = allRows[0];
+            const cols = allCols.sort((a, b) => a - b);
+            for (let c = cols[0]; c <= cols[cols.length - 1]; c++) {
+                if (!board.has(`${row},${c}`) && !pendingPlacements.some(p => p.col === c)) return false;
+            }
+        } else {
+            const col = allCols[0];
+            const rows = allRows.sort((a, b) => a - b);
+            for (let r = rows[0]; r <= rows[rows.length - 1]; r++) {
+                if (!board.has(`${r},${col}`) && !pendingPlacements.some(p => p.row === r)) return false;
+            }
+        }
+        return true;
+    }
+
+    function doSwap() {
+        if (bag.length === 0) {
+            GameUtils.showModal('Cannot Swap', 'The bag is empty!', [{ text: 'OK', primary: true }]);
+            return;
+        }
+
+        const indices = [...swapSelected].sort((a, b) => b - a);
+        const returned = [];
+        for (const i of indices) {
+            returned.push(hands[currentPlayer].splice(i, 1)[0]);
+        }
+
+        // Draw new tiles
+        for (let i = 0; i < returned.length && bag.length > 0; i++) {
+            hands[currentPlayer].push(bag.pop());
+        }
+
+        // Put returned tiles back in bag
+        bag.push(...returned);
+        shuffle(bag);
+
+        swapMode = false;
+        swapSelected = new Set();
+        consecutivePasses++;
+
+        const playerName = getPlayerName(currentPlayer);
+        document.getElementById('lastMoveInfo').textContent = `${playerName} swapped ${returned.length} tile(s).`;
+
+        if (consecutivePasses >= 4 || checkGameEnd(currentPlayer)) return;
+
+        switchTurn();
+    }
+
+    function drawTiles(playerIdx) {
+        while (hands[playerIdx].length < 6 && bag.length > 0) {
+            hands[playerIdx].push(bag.pop());
+        }
+    }
+
+    function switchTurn() {
+        currentPlayer = 1 - currentPlayer;
+        selectedHandIndex = -1;
+        swapMode = false;
+        swapSelected = new Set();
+
+        if (gameMode === '2p') {
+            handHidden = true;
+        }
+
+        updateTurnIndicator();
+        updateScoreSidebar();
+        updateBagCount();
+        renderBoard();
+        renderHand();
+
+        // AI turn
+        if (gameMode === '1p' && currentPlayer === 1 && !gameOver) {
+            disableControls(true);
+            setTimeout(() => {
+                aiTurn();
+            }, 600);
+        }
+    }
+
+    function revealHand() {
+        handHidden = false;
+        renderHand();
+    }
+
+    function disableControls(disabled) {
+        document.querySelectorAll('.turn-controls .btn').forEach(b => b.disabled = disabled);
+    }
+
+    function checkGameEnd(lastPlayer) {
+        // Player emptied hand and bag is empty
+        if (hands[lastPlayer].length === 0 && bag.length === 0) {
+            scores[lastPlayer] += 6; // Bonus for going out
+            endGame();
+            return true;
+        }
+
+        // Both players can't move (consecutive passes)
+        if (consecutivePasses >= 4) {
+            endGame();
+            return true;
+        }
+
+        // Check if current next player has any valid move
+        const nextPlayer = 1 - lastPlayer;
+        if (bag.length === 0 && !playerHasValidMove(nextPlayer)) {
+            if (!playerHasValidMove(lastPlayer)) {
+                endGame();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function playerHasValidMove(playerIdx) {
+        const hand = hands[playerIdx];
+        if (hand.length === 0) return false;
+        const positions = getValidPlacements();
+        for (const tile of hand) {
+            for (const pos of positions) {
+                if (canPlaceTileAt(tile, pos.row, pos.col)) return true;
+            }
+        }
+        return false;
+    }
+
+    function endGame() {
+        gameOver = true;
+        updateScoreSidebar();
+
+        const p1Name = getPlayerName(0);
+        const p2Name = getPlayerName(1);
+        let result, winner;
+
+        if (scores[0] > scores[1]) {
+            result = `${p1Name} wins!`;
+            winner = 0;
+            GameUtils.stats.update('qwirkle', currentPlayer === 0 || gameMode === '2p' ? 'win' : 'loss');
+        } else if (scores[1] > scores[0]) {
+            result = `${p2Name} wins!`;
+            winner = 1;
+            GameUtils.stats.update('qwirkle', gameMode === '1p' ? 'loss' : 'win');
+        } else {
+            result = "It's a tie!";
+            winner = -1;
+            GameUtils.stats.update('qwirkle', 'draw');
+        }
+
+        // Save high score for winner (or both in 2p)
+        if (winner >= 0) {
+            GameUtils.highScores.add('qwirkle', getPlayerName(winner), scores[winner], { difficulty });
+        }
+
+        GameUtils.showModal('Game Over', `
+            <p>${result}</p>
+            <p style="margin-top:10px;">${p1Name}: ${scores[0]} | ${p2Name}: ${scores[1]}</p>
+        `, [
+            { text: 'New Game', primary: true, action: () => { document.getElementById('gameArea').style.display = 'none'; document.getElementById('menu').style.display = ''; loadHighScores(); }},
+            { text: 'Close' }
+        ]);
+    }
+
+    // ===== UI UPDATES =====
+    function updateTurnIndicator() {
+        const el = document.getElementById('turnIndicator');
+        const name = getPlayerName(currentPlayer);
+        el.textContent = `${name}'s Turn`;
+        el.style.borderLeft = `4px solid ${currentPlayer === 0 ? 'var(--primary-color)' : 'var(--success-color)'}`;
+    }
+
+    function updateScoreSidebar() {
+        const container = document.getElementById('scoreEntries');
+        container.innerHTML = [0, 1].map(i => `
+            <div class="score-entry ${i === currentPlayer && !gameOver ? 'active' : ''}">
+                <span>${getPlayerName(i)}</span>
+                <span class="score-value">${scores[i]}</span>
+            </div>
+        `).join('');
+    }
+
+    function updateBagCount() {
+        document.getElementById('bagCount').textContent = `Tiles in bag: ${bag.length}`;
+    }
+
+    // ===== AI =====
+    function aiTurn() {
+        if (gameOver) return;
+
+        const hand = hands[1];
+        const moves = generateAllMoves(1);
+
+        if (moves.length === 0) {
+            // Swap if possible, otherwise pass
+            if (bag.length > 0) {
+                // Swap all tiles
+                const returned = hand.splice(0, hand.length);
+                for (let i = 0; i < returned.length && bag.length > 0; i++) {
+                    hand.push(bag.pop());
+                }
+                bag.push(...returned);
+                shuffle(bag);
+                consecutivePasses++;
+                document.getElementById('lastMoveInfo').textContent = 'Computer swapped tiles.';
+            } else {
+                consecutivePasses++;
+                document.getElementById('lastMoveInfo').textContent = 'Computer passed.';
+            }
+            if (checkGameEnd(1)) return;
+            currentPlayer = 0;
+            updateTurnIndicator();
+            updateScoreSidebar();
+            updateBagCount();
+            renderBoard();
+            renderHand();
+            disableControls(false);
+            return;
+        }
+
+        let move;
+        if (difficulty === 'easy') {
+            move = moves[Math.floor(Math.random() * moves.length)];
+        } else if (difficulty === 'medium') {
+            // Sample up to 20 moves, pick best
+            const sample = [];
+            const shuffled = [...moves];
+            shuffle(shuffled);
+            for (let i = 0; i < Math.min(20, shuffled.length); i++) {
+                sample.push(shuffled[i]);
+            }
+            move = sample.reduce((best, m) => m.score > best.score ? m : best, sample[0]);
+        } else {
+            // Hard: pick best move
+            move = moves.reduce((best, m) => m.score > best.score ? m : best, moves[0]);
+        }
+
+        // Execute the move
+        for (const p of move.placements) {
+            board.set(`${p.row},${p.col}`, p.tile);
+            const idx = hand.findIndex(t => t.shape === p.tile.shape && t.color === p.tile.color);
+            if (idx >= 0) hand.splice(idx, 1);
+        }
+
+        scores[1] += move.score;
+        consecutivePasses = 0;
+
+        const qwirkle = move.score >= 12 ? ' QWIRKLE!' : '';
+        document.getElementById('lastMoveInfo').textContent = `Computer scored ${move.score} points!${qwirkle}`;
+
+        drawTiles(1);
+
+        if (checkGameEnd(1)) return;
+
+        currentPlayer = 0;
+        updateTurnIndicator();
+        updateScoreSidebar();
+        updateBagCount();
+        renderBoard();
+        renderHand();
+        disableControls(false);
+    }
+
+    function generateAllMoves(playerIdx) {
+        const hand = hands[playerIdx];
+        const moves = [];
+
+        // Generate single tile placements
+        const positions = getValidPlacements();
+        const singlePlacements = [];
+
+        for (let i = 0; i < hand.length; i++) {
+            const tile = hand[i];
+            for (const pos of positions) {
+                if (canPlaceTileAt(tile, pos.row, pos.col)) {
+                    singlePlacements.push({ row: pos.row, col: pos.col, tile, handIdx: i });
+                }
+            }
+        }
+
+        // For each single placement, try extending
+        for (const sp of singlePlacements) {
+            board.set(`${sp.row},${sp.col}`, sp.tile);
+
+            const move = [{ row: sp.row, col: sp.col, tile: sp.tile }];
+            const usedIndices = new Set([sp.handIdx]);
+
+            // Score single tile move
+            pendingPlacements = move;
+            const singleScore = scorePendingPlacements();
+            moves.push({ placements: [...move], score: singleScore });
+
+            // Try extending with more tiles
+            if (hand.length > 1) {
+                extendMove(hand, move, usedIndices, sp.row, sp.col, moves);
+            }
+
+            board.delete(`${sp.row},${sp.col}`);
+        }
+
+        pendingPlacements = [];
+        return moves;
+    }
+
+    function extendMove(hand, currentMove, usedIndices, anchorRow, anchorCol, moves) {
+        // Determine direction from current placements
+        const rows = currentMove.map(m => m.row);
+        const cols = currentMove.map(m => m.col);
+        const isHorizontal = rows.every(r => r === rows[0]);
+        const isVertical = cols.every(c => c === cols[0]);
+
+        for (let i = 0; i < hand.length; i++) {
+            if (usedIndices.has(i)) continue;
+            const tile = hand[i];
+
+            // Get candidate positions along the same line
+            const candidates = [];
+            if (currentMove.length === 1) {
+                // Can extend in any direction
+                for (const pos of getValidPlacements()) {
+                    if (pos.row === rows[0] || pos.col === cols[0]) {
+                        candidates.push(pos);
+                    }
+                }
+            } else if (isHorizontal) {
+                for (const pos of getValidPlacements()) {
+                    if (pos.row === rows[0]) candidates.push(pos);
+                }
+            } else if (isVertical) {
+                for (const pos of getValidPlacements()) {
+                    if (pos.col === cols[0]) candidates.push(pos);
+                }
+            }
+
+            for (const pos of candidates) {
+                if (canPlaceTileAt(tile, pos.row, pos.col)) {
+                    board.set(`${pos.row},${pos.col}`, tile);
+                    currentMove.push({ row: pos.row, col: pos.col, tile });
+                    usedIndices.add(i);
+
+                    // Check contiguity
+                    pendingPlacements = currentMove;
+                    if (validatePendingContiguous()) {
+                        const score = scorePendingPlacements();
+                        moves.push({ placements: [...currentMove], score });
+
+                        if (currentMove.length < hand.length && currentMove.length < 6) {
+                            extendMove(hand, currentMove, usedIndices, anchorRow, anchorCol, moves);
+                        }
+                    }
+
+                    currentMove.pop();
+                    usedIndices.delete(i);
+                    board.delete(`${pos.row},${pos.col}`);
+                }
+            }
+        }
+    }
+
+    // ===== SCROLL BOARD TO CENTER =====
+    function scrollToCenter() {
+        const wrapper = document.getElementById('boardWrapper');
+        const inner = document.getElementById('boardInner');
+        wrapper.scrollLeft = (inner.offsetWidth - wrapper.offsetWidth) / 2;
+        wrapper.scrollTop = (inner.offsetHeight - wrapper.offsetHeight) / 2;
+    }
+
+    // Initial scroll after start
+    const origStart = startGame;
+    startGame = function() {
+        origStart();
+        setTimeout(scrollToCenter, 50);
+    };
+    </script>
+</body>
+</html>

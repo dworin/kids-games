@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 13 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 17 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
@@ -21,7 +21,11 @@ A collection of 13 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── battleship.html # Naval combat with ship placement
     ├── minesweeper.html # Classic mine-clearing puzzle
     ├── paigowpoker.html # Casino card game with hand setting
-    └── videopoker.html  # Jacks or Better draw poker
+    ├── videopoker.html  # Jacks or Better draw poker
+    ├── reversi.html     # Disc-flipping strategy game
+    ├── jonahcala.html   # Mancala variant with relay sowing
+    ├── spotit.html      # Symbol-matching card game
+    └── qwirkle.html     # Tile-matching strategy game
 ```
 
 ## Key Features
@@ -93,6 +97,39 @@ A collection of 13 classic games built with vanilla HTML, CSS, and JavaScript. D
 - Minimum winning hand: pair of Jacks or higher
 - Bet 1-5 credits; max bet gives Royal Flush bonus (4000 vs 1250)
 - Credits persist in localStorage
+
+### Reversi
+- 8x8 board, Black moves first
+- Place disc to flip opponent discs between yours
+- Must flip at least one disc per turn; pass if no valid moves
+- Game ends when neither player can move
+- AI difficulty: Easy (random), Medium (maximize flips), Hard (positional + mobility)
+
+### Jonahcala
+- Mancala variant with relay sowing mechanic
+- Pick up stones from a pit and sow counter-clockwise
+- If last stone lands in a non-empty pit (not your store), pick up all stones and keep sowing
+- Turn ends when last stone lands in your store or an empty pit
+- No capture rule - just relay sowing
+- AI difficulty: Easy (random), Medium (mix), Hard (simulates moves to maximize store)
+
+### Spot It
+- Symbol-matching card game based on projective plane mathematics
+- Every pair of cards shares exactly one common symbol — find it fast!
+- Difficulty controls symbols per card: Easy (4), Medium (6), Hard (8)
+- 1-player mode: race against AI opponent (AI speed varies by difficulty)
+- 2-player mode: tap your side's card to claim the match
+- Cards use emoji symbols at varied sizes and rotations for visual challenge
+- Score = matches × 100 − elapsed seconds
+
+### Qwirkle
+- 108 tiles: 6 shapes × 6 colors × 3 duplicates
+- Place 1+ tiles in a single row/column; all tiles in every affected line must share color or shape, no duplicates per line
+- Scoring: points = total tiles in each line created/extended; line of 6 = "Qwirkle" (6 + 6 bonus)
+- Swap tiles with bag instead of placing; game ends when bag empty + player empties hand (+6 bonus)
+- AI difficulty: Easy (random), Medium (sample 20 moves, pick best), Hard (evaluate all, maximize score)
+- Scrollable/pannable board with SVG tile rendering
+- 2-player mode with hand-hiding on turn switch
 
 ## Development
 To test locally:
