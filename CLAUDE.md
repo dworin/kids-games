@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 17 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 19 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
@@ -25,7 +25,9 @@ A collection of 17 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── reversi.html     # Disc-flipping strategy game
     ├── jonahcala.html   # Mancala variant with relay sowing
     ├── spotit.html      # Symbol-matching card game
-    └── qwirkle.html     # Tile-matching strategy game
+    ├── qwirkle.html     # Tile-matching strategy game
+    ├── numbermunchers.html # Math arcade with Troggles
+    └── wordsearch.html     # Word finding puzzle
 ```
 
 ## Key Features
@@ -130,6 +132,26 @@ A collection of 17 classic games built with vanilla HTML, CSS, and JavaScript. D
 - AI difficulty: Easy (random), Medium (sample 20 moves, pick best), Hard (evaluate all, maximize score)
 - Scrollable/pannable board with SVG tile rendering
 - 2-player mode with hand-hiding on turn switch
+
+### Number Munchers
+- 5x6 grid filled with numbers; munch those matching the criterion
+- Categories: Multiples, Factors, Primes, Equalities (expressions), Inequalities, Random
+- Troggles (enemies) roam the grid; collision costs a life
+- 3 lives; bonus life every 3 rounds; Troggles speed up over rounds
+- Score multiplier increases with rounds; board clear gives bonus points
+- AI difficulty: Easy (1 slow Troggle, simple math), Medium (2 Troggles), Hard (3 fast Troggles, harder math)
+- Arrow keys + Space/Enter to move and munch; mobile D-pad + tap
+- 2-player mode: alternating rounds, highest cumulative score wins
+
+### Word Search
+- Grid of letters with hidden words; find them by click-dragging across letters
+- 6 themed categories: Animals, Food, Sports, Space, Colors, Music
+- Difficulty: Easy (10x10, 6 words, no diagonal/backward), Medium (13x13, 8 words, diagonals), Hard (16x16, 12 words, all directions)
+- Click/drag selection constrained to straight lines (horizontal, vertical, diagonal)
+- Found words highlighted with unique colors on grid and crossed off word list
+- Solo mode: find all words, score based on completion time
+- vs Computer mode: race against AI opponent (Easy 15s, Medium 8s, Hard 4s per word)
+- Score = words found × 100 − elapsed seconds × difficulty multiplier
 
 ## Development
 To test locally:

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Word Search - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .game-layout {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .grid-container {
+            position: relative;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .ws-grid {
+            display: inline-grid;
+            gap: 2px;
+            background: var(--dark-bg);
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .ws-cell {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: var(--card-bg);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            position: relative;
+            z-index: 1;
+        }
+
+        .ws-cell:hover {
+            background: var(--card-hover);
+        }
+
+        .ws-cell.selecting {
+            background: var(--primary-color);
+            color: white;
+            transform: scale(1.05);
+            z-index: 2;
+        }
+
+        .ws-cell.found {
+            color: white;
+            font-weight: 800;
+        }
+
+        .ws-cell.found-0 { background: #6366f1; }
+        .ws-cell.found-1 { background: #ec4899; }
+        .ws-cell.found-2 { background: #10b981; }
+        .ws-cell.found-3 { background: #f59e0b; }
+        .ws-cell.found-4 { background: #ef4444; }
+        .ws-cell.found-5 { background: #8b5cf6; }
+        .ws-cell.found-6 { background: #06b6d4; }
+        .ws-cell.found-7 { background: #f97316; }
+        .ws-cell.found-8 { background: #14b8a6; }
+        .ws-cell.found-9 { background: #e11d48; }
+        .ws-cell.found-10 { background: #7c3aed; }
+        .ws-cell.found-11 { background: #0891b2; }
+
+        .word-list-panel {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            min-width: 200px;
+        }
+
+        .word-list-panel h3 {
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
+
+        .category-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+
+        .word-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .word-item {
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: var(--dark-bg);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+        }
+
+        .word-item.found {
+            text-decoration: line-through;
+            opacity: 0.5;
+            background: var(--card-hover);
+        }
+
+        .word-item.ai-found {
+            text-decoration: line-through;
+            opacity: 0.5;
+            background: rgba(239, 68, 68, 0.2);
+            border-left: 3px solid var(--danger-color);
+        }
+
+        .info-bar {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: var(--card-bg);
+            border-radius: 12px;
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-item .label {
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-item .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .selection-line {
+            position: absolute;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @media (max-width: 768px) {
+            .ws-cell {
+                width: 28px;
+                height: 28px;
+                font-size: 0.85rem;
+            }
+
+            .game-layout {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .word-list-panel {
+                width: 100%;
+            }
+
+            .word-list {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .word-item {
+                font-size: 0.85rem;
+                letter-spacing: 1px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .ws-cell {
+                width: 22px;
+                height: 22px;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Word Search</h1>
+            <a href="../index.html" class="back-btn">Home</a>
+        </div>
+
+        <div id="setup-screen">
+            <div class="game-container" style="text-align: center;">
+                <h2 style="margin-bottom: 20px;">Word Search</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Find all the hidden words in the grid!</p>
+
+                <div class="mode-selection">
+                    <button class="mode-btn active" data-mode="solo" onclick="selectMode('solo')">Solo</button>
+                    <button class="mode-btn" data-mode="vs-ai" onclick="selectMode('vs-ai')">vs Computer</button>
+                </div>
+
+                <div class="difficulty-selection" style="margin: 20px 0;">
+                    <button class="difficulty-btn active" data-diff="easy" onclick="selectDifficulty('easy')">Easy</button>
+                    <button class="difficulty-btn" data-diff="medium" onclick="selectDifficulty('medium')">Medium</button>
+                    <button class="difficulty-btn" data-diff="hard" onclick="selectDifficulty('hard')">Hard</button>
+                </div>
+
+                <div class="btn-group" style="margin-top: 25px;">
+                    <button class="btn btn-success" onclick="startGame()">Start Game</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-screen" style="display: none;">
+            <div class="info-bar">
+                <div class="info-item">
+                    <div class="label">Time</div>
+                    <div class="value" id="timer">0:00</div>
+                </div>
+                <div class="info-item">
+                    <div class="label" id="found-label">Found</div>
+                    <div class="value" id="found-count">0 / 0</div>
+                </div>
+                <div class="info-item" id="ai-info" style="display: none;">
+                    <div class="label">AI Found</div>
+                    <div class="value" id="ai-count">0</div>
+                </div>
+            </div>
+
+            <div class="game-layout">
+                <div class="grid-container" id="grid-container">
+                    <div class="ws-grid" id="grid"></div>
+                </div>
+                <div class="word-list-panel">
+                    <h3>Words to Find</h3>
+                    <div class="category-label" id="category-label"></div>
+                    <ul class="word-list" id="word-list"></ul>
+                </div>
+            </div>
+
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="newGame()">New Game</button>
+            </div>
+
+            <div class="game-container" style="margin-top: 20px;">
+                <h3 style="margin-bottom: 10px;">High Scores</h3>
+                <div id="high-scores"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        const GAME_NAME = 'wordsearch';
+
+        const CATEGORIES = {
+            Animals: ['elephant', 'giraffe', 'penguin', 'dolphin', 'tiger', 'monkey', 'rabbit', 'falcon', 'turtle', 'jaguar', 'parrot', 'lizard', 'whale', 'eagle', 'horse'],
+            Food: ['pizza', 'burger', 'sushi', 'pasta', 'tacos', 'cookie', 'waffle', 'muffin', 'cheese', 'salmon', 'mango', 'grape', 'bread', 'steak', 'salad'],
+            Sports: ['soccer', 'tennis', 'hockey', 'boxing', 'rugby', 'surfing', 'diving', 'rowing', 'skiing', 'fencing', 'karate', 'golf', 'polo', 'squash', 'volley'],
+            Space: ['planet', 'nebula', 'comet', 'galaxy', 'quasar', 'pulsar', 'meteor', 'rocket', 'orbit', 'lunar', 'solar', 'venus', 'mars', 'saturn', 'cosmos'],
+            Colors: ['scarlet', 'violet', 'golden', 'silver', 'indigo', 'maroon', 'bronze', 'coral', 'ivory', 'amber', 'crimson', 'teal', 'olive', 'azure', 'peach'],
+            Music: ['guitar', 'piano', 'drums', 'violin', 'flute', 'trumpet', 'cello', 'banjo', 'organ', 'harp', 'bass', 'rhythm', 'melody', 'tempo', 'chord']
+        };
+
+        const DIFFICULTY = {
+            easy: { rows: 10, cols: 10, wordCount: 6, directions: [[0,1],[1,0],[1,1]], multiplier: 1 },
+            medium: { rows: 13, cols: 13, wordCount: 8, directions: [[0,1],[1,0],[1,1],[1,-1],[0,-1],[-1,0]], multiplier: 2 },
+            hard: { rows: 16, cols: 16, wordCount: 12, directions: [[0,1],[1,0],[1,1],[1,-1],[0,-1],[-1,0],[-1,-1],[-1,1]], multiplier: 3 }
+        };
+
+        const AI_INTERVAL = { easy: 15000, medium: 8000, hard: 4000 };
+
+        let state = {
+            mode: 'solo',
+            difficulty: 'easy',
+            grid: [],
+            words: [],
+            placedWords: [],
+            foundWords: new Set(),
+            aiFoundWords: new Set(),
+            selecting: false,
+            startCell: null,
+            currentCell: null,
+            selectedCells: [],
+            timer: 0,
+            timerInterval: null,
+            aiInterval: null,
+            gameOver: false,
+            category: ''
+        };
+
+        function selectMode(mode) {
+            state.mode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+        }
+
+        function selectDifficulty(diff) {
+            state.difficulty = diff;
+            document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.toggle('active', b.dataset.diff === diff));
+        }
+
+        function startGame() {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            newGame();
+        }
+
+        function newGame() {
+            clearInterval(state.timerInterval);
+            clearInterval(state.aiInterval);
+
+            const diff = DIFFICULTY[state.difficulty];
+            const categoryNames = Object.keys(CATEGORIES);
+            state.category = categoryNames[Math.floor(Math.random() * categoryNames.length)];
+            const allWords = GameUtils.shuffleArray([...CATEGORIES[state.category]]);
+            state.words = allWords.slice(0, diff.wordCount).map(w => w.toUpperCase());
+            state.grid = [];
+            state.placedWords = [];
+            state.foundWords = new Set();
+            state.aiFoundWords = new Set();
+            state.selecting = false;
+            state.startCell = null;
+            state.currentCell = null;
+            state.selectedCells = [];
+            state.timer = 0;
+            state.gameOver = false;
+
+            generateGrid(diff);
+            renderGrid(diff);
+            renderWordList();
+            updateInfo();
+
+            document.getElementById('category-label').textContent = state.category;
+
+            if (state.mode === 'vs-ai') {
+                document.getElementById('turn-info').style.display = 'none';
+                document.getElementById('ai-info').style.display = '';
+                document.getElementById('ai-count').textContent = '0';
+                startAI();
+            } else {
+                // Solo mode - just the player and the timer
+                document.getElementById('ai-info').style.display = 'none';
+            }
+
+            state.timerInterval = setInterval(() => {
+                if (!state.gameOver) {
+                    state.timer++;
+                    document.getElementById('timer').textContent = formatTime(state.timer);
+                }
+            }, 1000);
+
+            GameUtils.renderHighScores(GAME_NAME, 'high-scores');
+        }
+
+        function generateGrid(diff) {
+            const { rows, cols, directions } = diff;
+
+            // Initialize empty grid
+            state.grid = Array.from({ length: rows }, () => Array(cols).fill(''));
+
+            // Place words
+            const shuffledWords = GameUtils.shuffleArray([...state.words]);
+            for (const word of shuffledWords) {
+                let placed = false;
+                const shuffledDirs = GameUtils.shuffleArray([...directions]);
+
+                for (let attempts = 0; attempts < 100 && !placed; attempts++) {
+                    const dir = shuffledDirs[attempts % shuffledDirs.length];
+                    const [dr, dc] = dir;
+
+                    const maxR = dr === 0 ? rows - 1 : (dr > 0 ? rows - word.length : rows - 1);
+                    const minR = dr === 0 ? 0 : (dr > 0 ? 0 : word.length - 1);
+                    const maxC = dc === 0 ? cols - 1 : (dc > 0 ? cols - word.length : cols - 1);
+                    const minC = dc === 0 ? 0 : (dc > 0 ? 0 : word.length - 1);
+
+                    if (minR > maxR || minC > maxC) continue;
+
+                    const r = minR + Math.floor(Math.random() * (maxR - minR + 1));
+                    const c = minC + Math.floor(Math.random() * (maxC - minC + 1));
+
+                    let canPlace = true;
+                    for (let i = 0; i < word.length; i++) {
+                        const nr = r + dr * i;
+                        const nc = c + dc * i;
+                        if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) { canPlace = false; break; }
+                        if (state.grid[nr][nc] !== '' && state.grid[nr][nc] !== word[i]) { canPlace = false; break; }
+                    }
+
+                    if (canPlace) {
+                        const cells = [];
+                        for (let i = 0; i < word.length; i++) {
+                            const nr = r + dr * i;
+                            const nc = c + dc * i;
+                            state.grid[nr][nc] = word[i];
+                            cells.push({ r: nr, c: nc });
+                        }
+                        state.placedWords.push({ word, cells });
+                        placed = true;
+                    }
+                }
+
+                if (!placed) {
+                    // Force place in first available row
+                    for (let r = 0; r < rows && !placed; r++) {
+                        for (let c = 0; c <= cols - word.length && !placed; c++) {
+                            let canPlace = true;
+                            for (let i = 0; i < word.length; i++) {
+                                if (state.grid[r][c + i] !== '' && state.grid[r][c + i] !== word[i]) { canPlace = false; break; }
+                            }
+                            if (canPlace) {
+                                const cells = [];
+                                for (let i = 0; i < word.length; i++) {
+                                    state.grid[r][c + i] = word[i];
+                                    cells.push({ r, c: c + i });
+                                }
+                                state.placedWords.push({ word, cells });
+                                placed = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Fill empty cells with random letters
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (state.grid[r][c] === '') {
+                        state.grid[r][c] = letters[Math.floor(Math.random() * 26)];
+                    }
+                }
+            }
+        }
+
+        function renderGrid(diff) {
+            const gridEl = document.getElementById('grid');
+            const { rows, cols } = diff || DIFFICULTY[state.difficulty];
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            gridEl.innerHTML = '';
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'ws-cell';
+                    cell.textContent = state.grid[r][c];
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+                    gridEl.appendChild(cell);
+                }
+            }
+
+            // Event listeners
+            const container = document.getElementById('grid-container');
+
+            container.addEventListener('mousedown', onPointerStart);
+            container.addEventListener('mousemove', onPointerMove);
+            document.addEventListener('mouseup', onPointerEnd);
+
+            container.addEventListener('touchstart', onTouchStart, { passive: false });
+            container.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', onPointerEnd);
+        }
+
+        function getCellFromEvent(e) {
+            const x = e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY);
+            if (x === undefined || y === undefined) return null;
+            const el = document.elementFromPoint(x, y);
+            if (el && el.classList.contains('ws-cell')) {
+                return { r: parseInt(el.dataset.row), c: parseInt(el.dataset.col), el };
+            }
+            return null;
+        }
+
+        function onPointerStart(e) {
+            if (state.gameOver) return;
+            const cell = getCellFromEvent(e);
+            if (!cell) return;
+            state.selecting = true;
+            state.startCell = cell;
+            state.currentCell = cell;
+            updateSelection();
+        }
+
+        function onTouchStart(e) {
+            e.preventDefault();
+            onPointerStart(e);
+        }
+
+        function onPointerMove(e) {
+            if (!state.selecting) return;
+            const cell = getCellFromEvent(e);
+            if (!cell) return;
+            if (cell.r !== state.currentCell.r || cell.c !== state.currentCell.c) {
+                state.currentCell = cell;
+                updateSelection();
+            }
+        }
+
+        function onTouchMove(e) {
+            e.preventDefault();
+            onPointerMove(e);
+        }
+
+        function onPointerEnd() {
+            if (!state.selecting) return;
+            state.selecting = false;
+            checkSelection();
+            clearSelection();
+        }
+
+        function getLineCells(start, end) {
+            const dr = Math.sign(end.r - start.r);
+            const dc = Math.sign(end.c - start.c);
+            const distR = Math.abs(end.r - start.r);
+            const distC = Math.abs(end.c - start.c);
+
+            // Must be a straight line (horizontal, vertical, or diagonal)
+            if (distR !== 0 && distC !== 0 && distR !== distC) return [];
+            const dist = Math.max(distR, distC);
+
+            const cells = [];
+            for (let i = 0; i <= dist; i++) {
+                cells.push({ r: start.r + dr * i, c: start.c + dc * i });
+            }
+            return cells;
+        }
+
+        function updateSelection() {
+            // Clear previous selection
+            document.querySelectorAll('.ws-cell.selecting').forEach(el => el.classList.remove('selecting'));
+
+            if (!state.startCell || !state.currentCell) return;
+
+            const cells = getLineCells(state.startCell, state.currentCell);
+            state.selectedCells = cells;
+
+            cells.forEach(({ r, c }) => {
+                const el = document.querySelector(`.ws-cell[data-row="${r}"][data-col="${c}"]`);
+                if (el) el.classList.add('selecting');
+            });
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.ws-cell.selecting').forEach(el => el.classList.remove('selecting'));
+            state.selectedCells = [];
+            state.startCell = null;
+            state.currentCell = null;
+        }
+
+        function checkSelection() {
+            if (state.selectedCells.length < 2) return;
+
+            const selectedWord = state.selectedCells.map(({ r, c }) => state.grid[r][c]).join('');
+
+            for (const placed of state.placedWords) {
+                if (state.foundWords.has(placed.word) || state.aiFoundWords.has(placed.word)) continue;
+
+                const placedStr = placed.cells.map(({ r, c }) => state.grid[r][c]).join('');
+                if (selectedWord === placedStr || selectedWord === placedStr.split('').reverse().join('')) {
+                    // Check cells match
+                    const fwdMatch = state.selectedCells.length === placed.cells.length &&
+                        state.selectedCells.every((s, i) => s.r === placed.cells[i].r && s.c === placed.cells[i].c);
+                    const revCells = [...placed.cells].reverse();
+                    const revMatch = state.selectedCells.length === revCells.length &&
+                        state.selectedCells.every((s, i) => s.r === revCells[i].r && s.c === revCells[i].c);
+
+                    if (fwdMatch || revMatch) {
+                        foundWord(placed, false);
+                        return;
+                    }
+                }
+            }
+        }
+
+        function foundWord(placed, isAI) {
+            const colorIndex = state.foundWords.size + state.aiFoundWords.size;
+
+            if (isAI) {
+                state.aiFoundWords.add(placed.word);
+            } else {
+                state.foundWords.add(placed.word);
+            }
+
+            // Highlight cells on grid
+            placed.cells.forEach(({ r, c }) => {
+                const el = document.querySelector(`.ws-cell[data-row="${r}"][data-col="${c}"]`);
+                if (el) {
+                    el.classList.add('found', `found-${colorIndex % 12}`);
+                }
+            });
+
+            // Update word list
+            const wordItem = document.querySelector(`.word-item[data-word="${placed.word}"]`);
+            if (wordItem) {
+                wordItem.classList.add(isAI ? 'ai-found' : 'found');
+                if (isAI) wordItem.textContent = placed.word + ' (AI)';
+            }
+
+            updateInfo();
+            checkGameOver();
+        }
+
+        function updateInfo() {
+            const totalWords = state.words.length;
+            document.getElementById('found-count').textContent = `${state.foundWords.size} / ${totalWords}`;
+            if (state.mode === 'vs-ai') {
+                document.getElementById('ai-count').textContent = state.aiFoundWords.size;
+            }
+        }
+
+        function startAI() {
+            const interval = AI_INTERVAL[state.difficulty];
+            state.aiInterval = setInterval(() => {
+                if (state.gameOver) return;
+
+                // Find a word the AI hasn't found yet
+                const remaining = state.placedWords.filter(p => !state.foundWords.has(p.word) && !state.aiFoundWords.has(p.word));
+                if (remaining.length === 0) return;
+
+                const pick = remaining[Math.floor(Math.random() * remaining.length)];
+                foundWord(pick, true);
+            }, interval);
+        }
+
+        function checkGameOver() {
+            const totalFound = state.foundWords.size + state.aiFoundWords.size;
+            if (totalFound < state.words.length) return;
+
+            state.gameOver = true;
+            clearInterval(state.timerInterval);
+            clearInterval(state.aiInterval);
+
+            const diff = DIFFICULTY[state.difficulty];
+            const goToMenu = () => { document.getElementById('setup-screen').style.display = ''; document.getElementById('game-screen').style.display = 'none'; };
+
+            if (state.mode === 'solo') {
+                // Solo: always a win, score based on time
+                GameUtils.stats.update(GAME_NAME, 'win');
+                const score = Math.max(0, (state.words.length * 100 - state.timer) * diff.multiplier);
+                GameUtils.highScores.add(GAME_NAME, GameUtils.playerName.get(1), score, { difficulty: state.difficulty });
+
+                GameUtils.showModal('Puzzle Complete!',
+                    `You found all ${state.words.length} words!<br>Time: ${formatTime(state.timer)}<br>Score: ${score}`,
+                    [
+                        { text: 'Play Again', primary: true, action: newGame },
+                        { text: 'Menu', action: goToMenu }
+                    ]
+                );
+            } else {
+                // vs-ai mode
+                const playerWords = state.foundWords.size;
+                const aiWords = state.aiFoundWords.size;
+                const won = playerWords > aiWords;
+                const tied = playerWords === aiWords;
+
+                GameUtils.stats.update(GAME_NAME, won ? 'win' : (tied ? 'draw' : 'loss'));
+
+                const score = Math.max(0, (playerWords * 100 - state.timer) * diff.multiplier);
+                GameUtils.highScores.add(GAME_NAME, GameUtils.playerName.get(1), score, { difficulty: state.difficulty });
+
+                const resultText = won ? 'You Win!' : (tied ? "It's a Tie!" : 'AI Wins!');
+                GameUtils.showModal(resultText,
+                    `You found ${playerWords} words, AI found ${aiWords} words.<br>Time: ${formatTime(state.timer)}<br>Score: ${score}`,
+                    [
+                        { text: 'Play Again', primary: true, action: newGame },
+                        { text: 'Menu', action: goToMenu }
+                    ]
+                );
+            }
+
+            GameUtils.renderHighScores(GAME_NAME, 'high-scores');
+        }
+
+        function renderWordList() {
+            const list = document.getElementById('word-list');
+            list.innerHTML = '';
+            for (const word of state.words) {
+                const li = document.createElement('li');
+                li.className = 'word-item';
+                li.dataset.word = word;
+                li.textContent = word;
+                list.appendChild(li);
+            }
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+    </script>
+</body>
+</html>
