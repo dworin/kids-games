@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 19 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 28 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
