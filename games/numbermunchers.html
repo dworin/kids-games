@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Number Munchers - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 2px;
+            max-width: 540px;
+            margin: 10px auto;
+            background: var(--dark-bg);
+            border-radius: 12px;
+            padding: 8px;
+            touch-action: manipulation;
+        }
+        .grid-cell {
+            aspect-ratio: 1.4;
+            background: var(--card-bg);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background 0.15s;
+            cursor: pointer;
+            min-height: 48px;
+        }
+        .grid-cell.muncher-here {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            font-size: 1.5rem;
+            z-index: 2;
+        }
+        .grid-cell.troggle-here {
+            z-index: 1;
+        }
+        .grid-cell.muncher-here.troggle-here {
+            z-index: 2;
+        }
+        .grid-cell .cell-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            line-height: 1.2;
+            font-size: inherit;
+        }
+        .grid-cell .troggle-icon {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 1.2rem;
+            z-index: 3;
+            animation: troggleBob 0.6s ease-in-out infinite alternate;
+        }
+        @keyframes troggleBob {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-2px); }
+        }
+        .grid-cell.munched {
+            background: var(--dark-bg);
+            color: transparent;
+        }
+        .grid-cell.correct-flash {
+            animation: correctFlash 0.4s ease-out;
+        }
+        @keyframes correctFlash {
+            0% { background: #10b981; transform: scale(1.05); }
+            100% { background: var(--dark-bg); transform: scale(1); }
+        }
+        .grid-cell.wrong-flash {
+            animation: wrongFlash 0.5s ease-out;
+        }
+        @keyframes wrongFlash {
+            0%, 100% { transform: translateX(0); }
+            15% { transform: translateX(-4px); background: var(--danger-color); }
+            30% { transform: translateX(4px); background: var(--danger-color); }
+            45% { transform: translateX(-3px); }
+            60% { transform: translateX(3px); }
+        }
+        .grid-cell.invincible {
+            animation: invinciblePulse 0.3s ease-in-out infinite alternate;
+        }
+        @keyframes invinciblePulse {
+            0% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        .criterion-bar {
+            text-align: center;
+            padding: 12px 20px;
+            margin: 10px auto;
+            max-width: 540px;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 10px auto;
+            max-width: 540px;
+            flex-wrap: wrap;
+        }
+        .info-box {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: var(--card-bg);
+            text-align: center;
+            min-width: 70px;
+        }
+        .info-box .label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .info-box .value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .lives-display {
+            color: var(--danger-color);
+            font-size: 1.3rem;
+            letter-spacing: 2px;
+        }
+
+        .points-popup {
+            position: absolute;
+            font-weight: 700;
+            font-size: 1rem;
+            pointer-events: none;
+            z-index: 10;
+            animation: popUp 0.8s ease-out forwards;
+        }
+        .points-popup.positive { color: #10b981; }
+        .points-popup.negative { color: #ef4444; }
+        @keyframes popUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-30px); }
+        }
+
+        .mobile-controls {
+            display: none;
+            max-width: 540px;
+            margin: 10px auto;
+            text-align: center;
+        }
+        .dpad {
+            display: inline-grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px 60px;
+            gap: 4px;
+        }
+        .dpad-btn {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 10px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .dpad-btn:active {
+            background: var(--primary-color);
+            transform: scale(0.95);
+        }
+        .dpad-btn.munch-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+        .dpad-spacer { visibility: hidden; }
+
+        @media (max-width: 600px) {
+            .mobile-controls { display: block; }
+            .game-board { max-width: 100%; gap: 1px; padding: 4px; }
+            .grid-cell { font-size: 0.85rem; min-height: 40px; }
+            .grid-cell .troggle-icon { font-size: 0.9rem; }
+            .criterion-bar { font-size: 1rem; }
+            .info-box .value { font-size: 1.1rem; }
+        }
+        @media (max-width: 380px) {
+            .grid-cell { font-size: 0.75rem; min-height: 34px; }
+            .dpad-btn { width: 50px; height: 50px; }
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .category-btn {
+            padding: 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .category-btn:hover, .category-btn.selected {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: #fff;
+        }
+        .category-btn .cat-icon { font-size: 1.5rem; display: block; margin-bottom: 5px; }
+        .category-btn .cat-name { font-weight: 600; }
+
+        #game-over-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        #game-over-overlay.active { display: flex; }
+        .game-over-box {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            max-width: 360px;
+            width: 90%;
+        }
+        .game-over-box h2 { margin-bottom: 15px; }
+        .final-score { font-size: 2.5rem; font-weight: 700; color: var(--primary-color); }
+        .game-over-box .btn { margin: 5px; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <button class="back-btn" onclick="GameUtils.goToLauncher()">Back</button>
+        <h1>Number Munchers</h1>
+    </header>
+
+    <div class="container">
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="game-container">
+            <h2 style="text-align:center; margin-bottom:20px;">Game Setup</h2>
+
+            <div class="form-group">
+                <label>Players</label>
+                <div class="btn-group">
+                    <button class="btn active" data-players="1" onclick="setPlayers(1)">1 Player</button>
+                    <button class="btn" data-players="2" onclick="setPlayers(2)">2 Players</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Difficulty</label>
+                <div class="btn-group">
+                    <button class="btn" data-diff="easy" onclick="setDifficulty('easy')">Easy</button>
+                    <button class="btn active" data-diff="medium" onclick="setDifficulty('medium')">Medium</button>
+                    <button class="btn" data-diff="hard" onclick="setDifficulty('hard')">Hard</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Category</label>
+                <div class="category-grid">
+                    <button class="category-btn selected" data-cat="multiples" onclick="setCategory('multiples')">
+                        <span class="cat-icon">&#215;</span>
+                        <span class="cat-name">Multiples</span>
+                    </button>
+                    <button class="category-btn" data-cat="factors" onclick="setCategory('factors')">
+                        <span class="cat-icon">&#247;</span>
+                        <span class="cat-name">Factors</span>
+                    </button>
+                    <button class="category-btn" data-cat="primes" onclick="setCategory('primes')">
+                        <span class="cat-icon">P</span>
+                        <span class="cat-name">Primes</span>
+                    </button>
+                    <button class="category-btn" data-cat="equalities" onclick="setCategory('equalities')">
+                        <span class="cat-icon">=</span>
+                        <span class="cat-name">Equalities</span>
+                    </button>
+                    <button class="category-btn" data-cat="inequalities" onclick="setCategory('inequalities')">
+                        <span class="cat-icon">&lt;&gt;</span>
+                        <span class="cat-name">Inequalities</span>
+                    </button>
+                    <button class="category-btn" data-cat="random" onclick="setCategory('random')">
+                        <span class="cat-icon">?</span>
+                        <span class="cat-name">Random</span>
+                    </button>
+                </div>
+            </div>
+
+            <button class="btn btn-success" style="width:100%; padding:15px; font-size:1.1rem; margin-top:10px;" onclick="startGame()">Start Game</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" style="display:none;">
+            <div class="game-info">
+                <div class="info-box">
+                    <div class="label">Score</div>
+                    <div class="value" id="score-display">0</div>
+                </div>
+                <div class="info-box">
+                    <div class="label">Round</div>
+                    <div class="value" id="round-display">1</div>
+                </div>
+                <div class="info-box">
+                    <div class="label">Lives</div>
+                    <div class="lives-display" id="lives-display"></div>
+                </div>
+                <div class="info-box" id="player-box" style="display:none;">
+                    <div class="label">Player</div>
+                    <div class="value" id="player-display"></div>
+                </div>
+                <div class="info-box">
+                    <div class="label">Left</div>
+                    <div class="value" id="remaining-display">0</div>
+                </div>
+            </div>
+
+            <div class="criterion-bar" id="criterion-display">Multiples of 3</div>
+
+            <div class="game-board" id="game-board"></div>
+
+            <div class="mobile-controls">
+                <div class="dpad">
+                    <div class="dpad-spacer"></div>
+                    <button class="dpad-btn" onclick="moveMuncher(0,-1)">&#9650;</button>
+                    <div class="dpad-spacer"></div>
+                    <button class="dpad-btn" onclick="moveMuncher(-1,0)">&#9664;</button>
+                    <button class="dpad-btn munch-btn" onclick="munchCurrent()">MUNCH</button>
+                    <button class="dpad-btn" onclick="moveMuncher(1,0)">&#9654;</button>
+                    <div class="dpad-spacer"></div>
+                    <button class="dpad-btn" onclick="moveMuncher(0,1)">&#9660;</button>
+                    <div class="dpad-spacer"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Overlay -->
+        <div id="game-over-overlay">
+            <div class="game-over-box">
+                <h2 id="game-over-title">Game Over</h2>
+                <div class="final-score" id="final-score">0</div>
+                <p id="game-over-msg" style="margin:10px 0; color:var(--text-secondary);"></p>
+                <div style="margin-top:20px;">
+                    <button class="btn btn-success" onclick="restartGame()">Play Again</button>
+                    <button class="btn" onclick="backToSetup()">Setup</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="game-container" style="margin-top:20px;">
+            <h3 style="margin-bottom:15px;">Statistics</h3>
+            <div id="game-stats"></div>
+            <h3 style="margin:15px 0;">High Scores</h3>
+            <div id="high-scores"></div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+    // ========== GAME STATE ==========
+    const ROWS = 5, COLS = 6;
+    const GAME_NAME = 'numbermunchers';
+
+    let config = { players: 1, difficulty: 'medium', category: 'multiples' };
+    let state = {};
+
+    function resetState() {
+        state = {
+            grid: [],           // ROWS x COLS of {value, display, isCorrect, munched}
+            muncher: { row: 2, col: 2 },
+            troggles: [],
+            score: [0, 0],
+            lives: 3,
+            round: 1,
+            currentPlayer: 0,   // 0 or 1 for 2-player
+            criterion: '',
+            criterionDesc: '',
+            correctCount: 0,
+            playing: false,
+            invincible: false,
+            troggleInterval: null,
+            gameOver: false
+        };
+    }
+
+    // ========== SETUP ==========
+    function setPlayers(n) {
+        config.players = n;
+        document.querySelectorAll('[data-players]').forEach(b => b.classList.toggle('active', +b.dataset.players === n));
+    }
+    function setDifficulty(d) {
+        config.difficulty = d;
+        document.querySelectorAll('[data-diff]').forEach(b => b.classList.toggle('active', b.dataset.diff === d));
+    }
+    function setCategory(c) {
+        config.category = c;
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.toggle('selected', b.dataset.cat === c));
+    }
+
+    // ========== MATH HELPERS ==========
+    function isPrime(n) {
+        if (n < 2) return false;
+        if (n < 4) return true;
+        if (n % 2 === 0 || n % 3 === 0) return false;
+        for (let i = 5; i * i <= n; i += 6) {
+            if (n % i === 0 || n % (i + 2) === 0) return false;
+        }
+        return true;
+    }
+
+    function getFactors(n) {
+        const factors = [];
+        for (let i = 1; i <= n; i++) {
+            if (n % i === 0) factors.push(i);
+        }
+        return factors;
+    }
+
+    function randInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // ========== CRITERION GENERATION ==========
+    function generateCriterion() {
+        let cat = config.category;
+        if (cat === 'random') {
+            const cats = ['multiples', 'factors', 'primes', 'equalities', 'inequalities'];
+            cat = cats[randInt(0, cats.length - 1)];
+        }
+
+        const roundBonus = Math.min(state.round - 1, 5);
+        const isHard = config.difficulty === 'hard';
+        const isEasy = config.difficulty === 'easy';
+
+        switch (cat) {
+            case 'multiples': {
+                const bases = isEasy ? [2, 3, 4, 5] : isHard ? [3, 4, 6, 7, 8, 9, 11, 12] : [2, 3, 4, 5, 6, 7, 8, 9];
+                const n = bases[randInt(0, bases.length - 1)];
+                return { type: 'multiples', n, desc: `Multiples of ${n}`, check: v => v % n === 0 };
+            }
+            case 'factors': {
+                const targets = isEasy ? [12, 16, 18, 20, 24] : isHard ? [36, 48, 56, 60, 72, 84, 96] : [24, 30, 36, 40, 48];
+                const n = targets[randInt(0, targets.length - 1)];
+                return { type: 'factors', n, desc: `Factors of ${n}`, check: v => n % v === 0 && v > 0 };
+            }
+            case 'primes': {
+                return { type: 'primes', desc: 'Prime Numbers', check: v => isPrime(v) };
+            }
+            case 'equalities': {
+                const maxVal = isEasy ? 12 : isHard ? 30 + roundBonus * 3 : 20 + roundBonus * 2;
+                const target = randInt(isEasy ? 4 : 8, maxVal);
+                return { type: 'equalities', n: target, desc: `Expressions = ${target}`, check: null, target };
+            }
+            case 'inequalities': {
+                const useGreater = Math.random() < 0.5;
+                const maxBound = isEasy ? 30 : isHard ? 80 : 50;
+                const bound = randInt(10, maxBound);
+                if (useGreater) {
+                    return { type: 'inequalities', desc: `Numbers > ${bound}`, check: v => v > bound, bound };
+                } else {
+                    return { type: 'inequalities', desc: `Numbers < ${bound}`, check: v => v < bound, bound };
+                }
+            }
+        }
+    }
+
+    // ========== GRID GENERATION ==========
+    function makeExpression(target) {
+        const ops = ['+', '-', '\u00d7'];
+        const op = ops[randInt(0, 2)];
+        let a, b;
+        switch (op) {
+            case '+':
+                a = randInt(0, target);
+                b = target - a;
+                break;
+            case '-':
+                a = randInt(target, target + 20);
+                b = a - target;
+                break;
+            case '\u00d7':
+                // find factor pairs
+                const facs = [];
+                for (let i = 1; i <= Math.sqrt(target); i++) {
+                    if (target % i === 0) facs.push([i, target / i]);
+                }
+                if (facs.length > 0) {
+                    const pair = facs[randInt(0, facs.length - 1)];
+                    a = pair[0]; b = pair[1];
+                } else {
+                    a = 1; b = target;
+                }
+                break;
+        }
+        return { display: `${a}${op}${b}`, value: target };
+    }
+
+    function makeWrongExpression(target) {
+        let wrong = target;
+        while (wrong === target) {
+            wrong = target + randInt(-5, 5);
+            if (wrong < 0) wrong = target + randInt(1, 5);
+        }
+        const expr = makeExpression(wrong);
+        return { display: expr.display, value: wrong };
+    }
+
+    function fillGrid(criterion) {
+        const totalCells = ROWS * COLS;
+        const correctRatio = config.difficulty === 'easy' ? 0.4 : config.difficulty === 'hard' ? 0.25 : 0.33;
+        const numCorrect = Math.max(4, Math.round(totalCells * correctRatio));
+
+        const grid = [];
+        const isEquality = criterion.type === 'equalities';
+        const roundBonus = Math.min(state.round - 1, 5);
+        const isHard = config.difficulty === 'hard';
+        const isEasy = config.difficulty === 'easy';
+
+        // Number range depends on criterion type
+        let minNum = 1, maxNum = 50;
+        if (criterion.type === 'multiples') {
+            maxNum = criterion.n * (isEasy ? 10 : isHard ? 15 + roundBonus : 12 + roundBonus);
+        } else if (criterion.type === 'factors') {
+            maxNum = criterion.n;
+        } else if (criterion.type === 'primes') {
+            maxNum = isEasy ? 30 : isHard ? 100 + roundBonus * 10 : 60 + roundBonus * 5;
+        } else if (criterion.type === 'inequalities') {
+            minNum = Math.max(1, criterion.bound - 30);
+            maxNum = criterion.bound + 30;
+        }
+
+        // Generate correct values
+        const correctValues = [];
+        if (isEquality) {
+            for (let i = 0; i < numCorrect; i++) {
+                correctValues.push(makeExpression(criterion.target));
+            }
+        } else {
+            let attempts = 0;
+            while (correctValues.length < numCorrect && attempts < 500) {
+                const v = randInt(minNum, maxNum);
+                if (criterion.check(v) && !correctValues.some(c => c.value === v)) {
+                    correctValues.push({ value: v, display: String(v) });
+                }
+                attempts++;
+            }
+        }
+
+        // Generate wrong values
+        const wrongValues = [];
+        const needed = totalCells - correctValues.length;
+        if (isEquality) {
+            for (let i = 0; i < needed; i++) {
+                wrongValues.push(makeWrongExpression(criterion.target));
+            }
+        } else {
+            let attempts = 0;
+            while (wrongValues.length < needed && attempts < 1000) {
+                const v = randInt(minNum, maxNum);
+                if (!criterion.check(v) && !wrongValues.some(c => c.value === v) && !correctValues.some(c => c.value === v)) {
+                    wrongValues.push({ value: v, display: String(v) });
+                }
+                attempts++;
+            }
+            // fill remaining if needed
+            while (wrongValues.length < needed) {
+                const v = randInt(1, maxNum + 20);
+                wrongValues.push({ value: v, display: String(v) });
+            }
+        }
+
+        // Combine and shuffle
+        const cells = [
+            ...correctValues.map(c => ({ ...c, isCorrect: true, munched: false })),
+            ...wrongValues.map(c => ({ ...c, isCorrect: false, munched: false }))
+        ];
+        const shuffled = GameUtils.shuffleArray(cells);
+
+        // Fill into ROWS x COLS grid
+        for (let r = 0; r < ROWS; r++) {
+            grid[r] = [];
+            for (let c = 0; c < COLS; c++) {
+                grid[r][c] = shuffled[r * COLS + c] || { value: 0, display: '0', isCorrect: false, munched: false };
+            }
+        }
+
+        return { grid, correctCount: correctValues.length };
+    }
+
+    // ========== TROGGLES ==========
+    function spawnTroggles() {
+        const count = config.difficulty === 'easy' ? 1 : config.difficulty === 'hard' ? 3 : 2;
+        const extra = Math.min(Math.floor((state.round - 1) / 3), 2);
+        const total = count + extra;
+
+        state.troggles = [];
+        for (let i = 0; i < total; i++) {
+            // Spawn on edges
+            let r, c;
+            if (Math.random() < 0.5) {
+                r = Math.random() < 0.5 ? 0 : ROWS - 1;
+                c = randInt(0, COLS - 1);
+            } else {
+                r = randInt(0, ROWS - 1);
+                c = Math.random() < 0.5 ? 0 : COLS - 1;
+            }
+            // Don't spawn on muncher
+            if (r === state.muncher.row && c === state.muncher.col) {
+                r = (r + 2) % ROWS;
+            }
+            state.troggles.push({ row: r, col: c });
+        }
+    }
+
+    function moveTroggles() {
+        if (!state.playing || state.gameOver) return;
+        const bias = config.difficulty === 'hard' ? 0.5 : config.difficulty === 'medium' ? 0.3 : 0;
+
+        state.troggles.forEach(t => {
+            let dr = 0, dc = 0;
+            if (Math.random() < bias) {
+                // Biased toward muncher
+                const rdiff = state.muncher.row - t.row;
+                const cdiff = state.muncher.col - t.col;
+                if (Math.abs(rdiff) > Math.abs(cdiff)) {
+                    dr = rdiff > 0 ? 1 : -1;
+                } else if (cdiff !== 0) {
+                    dc = cdiff > 0 ? 1 : -1;
+                } else {
+                    dr = rdiff > 0 ? 1 : -1;
+                }
+            } else {
+                // Random
+                const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+                const d = dirs[randInt(0, 3)];
+                dr = d[0]; dc = d[1];
+            }
+            t.row = ((t.row + dr) % ROWS + ROWS) % ROWS;
+            t.col = ((t.col + dc) % COLS + COLS) % COLS;
+        });
+
+        checkTroggleCollision();
+        renderBoard();
+    }
+
+    function getTroggleSpeed() {
+        const base = config.difficulty === 'easy' ? 1800 : config.difficulty === 'hard' ? 800 : 1200;
+        const reduction = Math.min(state.round * 30, 400);
+        return Math.max(400, base - reduction);
+    }
+
+    function startTroggleTimer() {
+        stopTroggleTimer();
+        state.troggleInterval = setInterval(moveTroggles, getTroggleSpeed());
+    }
+
+    function stopTroggleTimer() {
+        if (state.troggleInterval) {
+            clearInterval(state.troggleInterval);
+            state.troggleInterval = null;
+        }
+    }
+
+    // ========== COLLISION ==========
+    function checkTroggleCollision() {
+        if (state.invincible || state.gameOver) return;
+        for (const t of state.troggles) {
+            if (t.row === state.muncher.row && t.col === state.muncher.col) {
+                loseLife();
+                return;
+            }
+        }
+    }
+
+    function loseLife() {
+        state.lives--;
+        updateInfoDisplay();
+        if (state.lives <= 0) {
+            endGame();
+            return;
+        }
+        // Brief invincibility
+        state.invincible = true;
+        const munIdx = state.muncher.row * COLS + state.muncher.col;
+        const cells = document.querySelectorAll('.grid-cell');
+        if (cells[munIdx]) cells[munIdx].classList.add('invincible');
+        setTimeout(() => {
+            state.invincible = false;
+            if (cells[munIdx]) cells[munIdx].classList.remove('invincible');
+        }, 1500);
+        // Respawn muncher at center
+        state.muncher.row = 2;
+        state.muncher.col = 2;
+        renderBoard();
+    }
+
+    // ========== MOVEMENT & MUNCHING ==========
+    function moveMuncher(dc, dr) {
+        if (!state.playing || state.gameOver) return;
+        state.muncher.row = ((state.muncher.row + dr) % ROWS + ROWS) % ROWS;
+        state.muncher.col = ((state.muncher.col + dc) % COLS + COLS) % COLS;
+        checkTroggleCollision();
+        renderBoard();
+    }
+
+    function munchCurrent() {
+        if (!state.playing || state.gameOver) return;
+        const r = state.muncher.row, c = state.muncher.col;
+        const cell = state.grid[r][c];
+        if (cell.munched) return;
+
+        const cellIdx = r * COLS + c;
+        const cellEl = document.querySelectorAll('.grid-cell')[cellIdx];
+
+        if (cell.isCorrect) {
+            // Correct munch
+            cell.munched = true;
+            const multiplier = Math.floor((state.round - 1) / 2) + 1;
+            const points = 10 * multiplier;
+            state.score[state.currentPlayer] += points;
+            state.correctCount--;
+            showPointsPopup(cellEl, `+${points}`, true);
+            if (cellEl) cellEl.classList.add('correct-flash');
+
+            if (state.correctCount <= 0) {
+                // Board clear bonus
+                const bonus = 50 * multiplier;
+                state.score[state.currentPlayer] += bonus;
+                setTimeout(() => advanceRound(), 600);
+            }
+        } else {
+            // Wrong munch
+            cell.munched = true;
+            state.score[state.currentPlayer] = Math.max(0, state.score[state.currentPlayer] - 10);
+            showPointsPopup(cellEl, '-10', false);
+            if (cellEl) cellEl.classList.add('wrong-flash');
+        }
+
+        updateInfoDisplay();
+        renderBoard();
+    }
+
+    function showPointsPopup(el, text, positive) {
+        if (!el) return;
+        const popup = document.createElement('div');
+        popup.className = `points-popup ${positive ? 'positive' : 'negative'}`;
+        popup.textContent = text;
+        popup.style.left = '50%';
+        popup.style.top = '0';
+        popup.style.transform = 'translateX(-50%)';
+        el.appendChild(popup);
+        setTimeout(() => popup.remove(), 800);
+    }
+
+    // ========== ROUNDS ==========
+    function advanceRound() {
+        if (state.gameOver) return;
+
+        // 2-player: switch turns every round
+        if (config.players === 2) {
+            state.currentPlayer = 1 - state.currentPlayer;
+        }
+
+        state.round++;
+        // Bonus life every 3 rounds
+        if (state.round % 3 === 1 && state.round > 1) {
+            state.lives = Math.min(state.lives + 1, 5);
+        }
+
+        setupRound();
+    }
+
+    function setupRound() {
+        const criterion = generateCriterion();
+        state.criterion = criterion;
+        state.criterionDesc = criterion.desc;
+
+        const { grid, correctCount } = fillGrid(criterion);
+        state.grid = grid;
+        state.correctCount = correctCount;
+
+        state.muncher = { row: 2, col: 2 };
+        spawnTroggles();
+        startTroggleTimer();
+
+        updateInfoDisplay();
+        renderBoard();
+    }
+
+    // ========== RENDERING ==========
+    function renderBoard() {
+        const board = document.getElementById('game-board');
+        let html = '';
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                const cell = state.grid[r][c];
+                const isMuncher = r === state.muncher.row && c === state.muncher.col;
+                const troggleHere = state.troggles.some(t => t.row === r && t.col === c);
+
+                let classes = 'grid-cell';
+                if (cell.munched && !isMuncher) classes += ' munched';
+                if (isMuncher) classes += ' muncher-here';
+                if (troggleHere) classes += ' troggle-here';
+                if (state.invincible && isMuncher) classes += ' invincible';
+
+                let content = '';
+                if (isMuncher) {
+                    content = '<span class="cell-content">\uD83D\uDE03</span>';
+                } else if (!cell.munched) {
+                    content = `<span class="cell-content">${cell.display}</span>`;
+                }
+                if (troggleHere) {
+                    content += '<span class="troggle-icon">\uD83D\uDC7E</span>';
+                }
+
+                html += `<div class="${classes}" data-r="${r}" data-c="${c}" onclick="handleCellClick(${r},${c})">${content}</div>`;
+            }
+        }
+        board.innerHTML = html;
+    }
+
+    function updateInfoDisplay() {
+        document.getElementById('score-display').textContent = state.score[state.currentPlayer];
+        document.getElementById('round-display').textContent = state.round;
+        document.getElementById('remaining-display').textContent = state.correctCount;
+
+        // Lives as hearts
+        let hearts = '';
+        for (let i = 0; i < state.lives; i++) hearts += '\u2764 ';
+        document.getElementById('lives-display').textContent = hearts.trim();
+
+        if (config.players === 2) {
+            document.getElementById('player-box').style.display = '';
+            const name = GameUtils.playerName.get(state.currentPlayer + 1);
+            document.getElementById('player-display').textContent = name;
+        }
+
+        document.getElementById('criterion-display').textContent = state.criterionDesc;
+    }
+
+    function handleCellClick(r, c) {
+        if (!state.playing || state.gameOver) return;
+        // On mobile tap: if adjacent or same cell, move there and munch
+        const dr = r - state.muncher.row;
+        const dc = c - state.muncher.col;
+        if (dr === 0 && dc === 0) {
+            munchCurrent();
+        } else {
+            // Move to cell
+            state.muncher.row = r;
+            state.muncher.col = c;
+            checkTroggleCollision();
+            renderBoard();
+        }
+    }
+
+    // ========== GAME FLOW ==========
+    function startGame() {
+        resetState();
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = '';
+        document.getElementById('game-over-overlay').classList.remove('active');
+
+        if (config.players === 2) {
+            document.getElementById('player-box').style.display = '';
+        } else {
+            document.getElementById('player-box').style.display = 'none';
+        }
+
+        state.playing = true;
+        setupRound();
+    }
+
+    function endGame() {
+        state.playing = false;
+        state.gameOver = true;
+        stopTroggleTimer();
+
+        const score = config.players === 2 ? Math.max(state.score[0], state.score[1]) : state.score[0];
+        const playerName = config.players === 2
+            ? (state.score[0] >= state.score[1] ? GameUtils.playerName.get(1) : GameUtils.playerName.get(2))
+            : GameUtils.playerName.get(1);
+
+        // Stats
+        GameUtils.stats.update(GAME_NAME, 'loss');
+        GameUtils.highScores.add(GAME_NAME, playerName, score, { round: state.round, difficulty: config.difficulty });
+
+        // Show overlay
+        document.getElementById('final-score').textContent = score;
+        let msg = `Reached round ${state.round}`;
+        if (config.players === 2) {
+            msg = `${GameUtils.playerName.get(1)}: ${state.score[0]} | ${GameUtils.playerName.get(2)}: ${state.score[1]}`;
+            const winner = state.score[0] > state.score[1] ? GameUtils.playerName.get(1)
+                : state.score[1] > state.score[0] ? GameUtils.playerName.get(2) : 'Tie';
+            if (winner !== 'Tie') msg += `<br>${winner} wins!`;
+        }
+        document.getElementById('game-over-msg').innerHTML = msg;
+        document.getElementById('game-over-overlay').classList.add('active');
+
+        refreshStats();
+    }
+
+    function restartGame() {
+        startGame();
+    }
+
+    function backToSetup() {
+        stopTroggleTimer();
+        state.playing = false;
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('game-over-overlay').classList.remove('active');
+        document.getElementById('setup-screen').style.display = '';
+    }
+
+    // ========== KEYBOARD ==========
+    document.addEventListener('keydown', e => {
+        if (!state.playing || state.gameOver) return;
+        switch (e.key) {
+            case 'ArrowUp': e.preventDefault(); moveMuncher(0, -1); break;
+            case 'ArrowDown': e.preventDefault(); moveMuncher(0, 1); break;
+            case 'ArrowLeft': e.preventDefault(); moveMuncher(-1, 0); break;
+            case 'ArrowRight': e.preventDefault(); moveMuncher(1, 0); break;
+            case ' ':
+            case 'Enter': e.preventDefault(); munchCurrent(); break;
+        }
+    });
+
+    // ========== STATS ==========
+    function refreshStats() {
+        GameUtils.renderStats(GAME_NAME, 'game-stats');
+        GameUtils.renderHighScores(GAME_NAME, 'high-scores');
+    }
+    refreshStats();
+    </script>
+</body>
+</html>
