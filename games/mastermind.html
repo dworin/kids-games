@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mastermind - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .mm-board {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .mm-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 15px;
+            border-radius: 10px;
+            background: var(--dark-bg);
+        }
+
+        .mm-row.active {
+            background: var(--card-hover);
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        .mm-row.past {
+            opacity: 0.7;
+        }
+
+        .mm-row-num {
+            width: 24px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .mm-pegs {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mm-peg {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .mm-peg:hover { transform: scale(1.1); }
+
+        .mm-peg.color-0 { background: #ef4444; border-color: #dc2626; }
+        .mm-peg.color-1 { background: #3b82f6; border-color: #2563eb; }
+        .mm-peg.color-2 { background: #22c55e; border-color: #16a34a; }
+        .mm-peg.color-3 { background: #eab308; border-color: #ca8a04; }
+        .mm-peg.color-4 { background: #a855f7; border-color: #9333ea; }
+        .mm-peg.color-5 { background: #f97316; border-color: #ea580c; }
+        .mm-peg.color-6 { background: #06b6d4; border-color: #0891b2; }
+        .mm-peg.color-7 { background: #ec4899; border-color: #db2777; }
+
+        .mm-feedback {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4px;
+            margin-left: 5px;
+        }
+
+        .mm-fb-peg {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+        }
+
+        .mm-fb-peg.black { background: #1e293b; border-color: #0f172a; }
+        .mm-fb-peg.white { background: #e2e8f0; border-color: #cbd5e1; }
+
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+
+        .color-pick {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 3px solid transparent;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .color-pick:hover { transform: scale(1.15); }
+        .color-pick.selected { border-color: white; transform: scale(1.15); }
+
+        .color-pick.c-0 { background: #ef4444; }
+        .color-pick.c-1 { background: #3b82f6; }
+        .color-pick.c-2 { background: #22c55e; }
+        .color-pick.c-3 { background: #eab308; }
+        .color-pick.c-4 { background: #a855f7; }
+        .color-pick.c-5 { background: #f97316; }
+        .color-pick.c-6 { background: #06b6d4; }
+        .color-pick.c-7 { background: #ec4899; }
+
+        .secret-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 15px 0;
+            padding: 12px 20px;
+            background: var(--dark-bg);
+            border-radius: 10px;
+        }
+
+        .secret-peg {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--card-hover);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 10px 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.black { background: #1e293b; }
+        .legend-dot.white { background: #e2e8f0; }
+
+        @media (max-width: 480px) {
+            .mm-peg { width: 34px; height: 34px; }
+            .mm-pegs { gap: 6px; }
+            .secret-peg { width: 34px; height: 34px; }
+            .color-pick { width: 38px; height: 38px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Mastermind</h1>
+            <a href="../index.html" class="back-btn">Home</a>
+        </div>
+
+        <div id="setup-screen">
+            <div class="game-container" style="text-align: center;">
+                <h2 style="margin-bottom: 20px;">Mastermind</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Crack the secret color code!</p>
+
+                <div class="difficulty-selection" style="margin: 20px 0;">
+                    <button class="difficulty-btn active" data-diff="easy" onclick="selectDifficulty('easy')">Easy</button>
+                    <button class="difficulty-btn" data-diff="medium" onclick="selectDifficulty('medium')">Medium</button>
+                    <button class="difficulty-btn" data-diff="hard" onclick="selectDifficulty('hard')">Hard</button>
+                </div>
+
+                <div class="btn-group" style="margin-top: 25px;">
+                    <button class="btn btn-success" onclick="startGame()">Start Game</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-screen" style="display: none;">
+            <div class="game-status" id="status">Pick colors and guess the code!</div>
+
+            <div class="secret-row" id="secret-row"></div>
+
+            <div class="legend">
+                <div class="legend-item"><span class="legend-dot black"></span> Correct color & position</div>
+                <div class="legend-item"><span class="legend-dot white"></span> Correct color, wrong position</div>
+            </div>
+
+            <div class="game-container">
+                <div class="mm-board" id="board"></div>
+
+                <div class="color-picker" id="color-picker"></div>
+
+                <div class="btn-group">
+                    <button class="btn" id="submit-btn" onclick="submitGuess()" disabled>Submit Guess</button>
+                    <button class="btn btn-secondary" onclick="clearCurrentRow()">Clear</button>
+                </div>
+            </div>
+
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="newGame()">New Game</button>
+                <button class="btn btn-secondary" onclick="goToMenu()">Menu</button>
+            </div>
+
+            <div class="game-container" style="margin-top: 20px;">
+                <h3 style="margin-bottom: 10px;">High Scores</h3>
+                <div id="high-scores"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        const GAME_NAME = 'mastermind';
+
+        const DIFFICULTY = {
+            easy:   { pegs: 4, colors: 6, maxGuesses: 12, allowDupes: false },
+            medium: { pegs: 4, colors: 6, maxGuesses: 10, allowDupes: true },
+            hard:   { pegs: 5, colors: 8, maxGuesses: 10, allowDupes: true }
+        };
+
+        let state = {
+            difficulty: 'easy',
+            secret: [],
+            guesses: [],
+            feedback: [],
+            currentGuess: [],
+            currentRow: 0,
+            selectedColor: 0,
+            gameOver: false,
+            config: DIFFICULTY.easy
+        };
+
+        function selectDifficulty(diff) {
+            state.difficulty = diff;
+            document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.toggle('active', b.dataset.diff === diff));
+        }
+
+        function startGame() {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            newGame();
+        }
+
+        function goToMenu() {
+            document.getElementById('setup-screen').style.display = '';
+            document.getElementById('game-screen').style.display = 'none';
+        }
+
+        function newGame() {
+            state.config = DIFFICULTY[state.difficulty];
+            state.secret = generateSecret();
+            state.guesses = [];
+            state.feedback = [];
+            state.currentGuess = Array(state.config.pegs).fill(-1);
+            state.currentRow = 0;
+            state.selectedColor = 0;
+            state.gameOver = false;
+
+            renderColorPicker();
+            renderBoard();
+            renderSecret(false);
+            updateStatus('Pick colors and guess the code!');
+            document.getElementById('submit-btn').disabled = true;
+            GameUtils.renderHighScores(GAME_NAME, 'high-scores');
+        }
+
+        function generateSecret() {
+            const { pegs, colors, allowDupes } = state.config;
+            const secret = [];
+            const available = Array.from({ length: colors }, (_, i) => i);
+
+            for (let i = 0; i < pegs; i++) {
+                if (allowDupes) {
+                    secret.push(Math.floor(Math.random() * colors));
+                } else {
+                    const idx = Math.floor(Math.random() * available.length);
+                    secret.push(available[idx]);
+                    available.splice(idx, 1);
+                }
+            }
+            return secret;
+        }
+
+        function renderColorPicker() {
+            const picker = document.getElementById('color-picker');
+            picker.innerHTML = '';
+            for (let i = 0; i < state.config.colors; i++) {
+                const btn = document.createElement('div');
+                btn.className = `color-pick c-${i}` + (i === state.selectedColor ? ' selected' : '');
+                btn.addEventListener('click', () => {
+                    state.selectedColor = i;
+                    document.querySelectorAll('.color-pick').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                });
+                picker.appendChild(btn);
+            }
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+
+            for (let r = state.config.maxGuesses - 1; r >= 0; r--) {
+                const row = document.createElement('div');
+                row.className = 'mm-row';
+                if (r === state.currentRow && !state.gameOver) row.classList.add('active');
+                if (r < state.currentRow) row.classList.add('past');
+
+                const num = document.createElement('div');
+                num.className = 'mm-row-num';
+                num.textContent = r + 1;
+                row.appendChild(num);
+
+                const pegs = document.createElement('div');
+                pegs.className = 'mm-pegs';
+
+                for (let p = 0; p < state.config.pegs; p++) {
+                    const peg = document.createElement('div');
+                    peg.className = 'mm-peg';
+
+                    if (r < state.currentRow) {
+                        // Past guess
+                        peg.classList.add(`color-${state.guesses[r][p]}`);
+                    } else if (r === state.currentRow && !state.gameOver) {
+                        // Current guess
+                        if (state.currentGuess[p] >= 0) {
+                            peg.classList.add(`color-${state.currentGuess[p]}`);
+                        }
+                        peg.addEventListener('click', () => {
+                            state.currentGuess[p] = state.selectedColor;
+                            renderBoard();
+                            checkSubmitReady();
+                        });
+                    }
+                    pegs.appendChild(peg);
+                }
+                row.appendChild(pegs);
+
+                // Feedback pegs
+                const fb = document.createElement('div');
+                fb.className = 'mm-feedback';
+                if (r < state.currentRow) {
+                    const { blacks, whites } = state.feedback[r];
+                    for (let i = 0; i < state.config.pegs; i++) {
+                        const fbPeg = document.createElement('div');
+                        fbPeg.className = 'mm-fb-peg';
+                        if (i < blacks) fbPeg.classList.add('black');
+                        else if (i < blacks + whites) fbPeg.classList.add('white');
+                        fb.appendChild(fbPeg);
+                    }
+                } else {
+                    for (let i = 0; i < state.config.pegs; i++) {
+                        const fbPeg = document.createElement('div');
+                        fbPeg.className = 'mm-fb-peg';
+                        fb.appendChild(fbPeg);
+                    }
+                }
+                row.appendChild(fb);
+
+                board.appendChild(row);
+            }
+        }
+
+        function renderSecret(reveal) {
+            const secretRow = document.getElementById('secret-row');
+            secretRow.innerHTML = '';
+            for (let i = 0; i < state.config.pegs; i++) {
+                const peg = document.createElement('div');
+                peg.className = 'secret-peg';
+                if (reveal) {
+                    peg.classList.add(`color-${state.secret[i]}`);
+                    peg.className = `secret-peg mm-peg color-${state.secret[i]}`;
+                    peg.style.border = 'none';
+                } else {
+                    peg.textContent = '?';
+                }
+                secretRow.appendChild(peg);
+            }
+        }
+
+        function checkSubmitReady() {
+            const ready = state.currentGuess.every(c => c >= 0);
+            document.getElementById('submit-btn').disabled = !ready;
+        }
+
+        function clearCurrentRow() {
+            if (state.gameOver) return;
+            state.currentGuess = Array(state.config.pegs).fill(-1);
+            renderBoard();
+            document.getElementById('submit-btn').disabled = true;
+        }
+
+        function submitGuess() {
+            if (state.gameOver || state.currentGuess.some(c => c < 0)) return;
+
+            const guess = [...state.currentGuess];
+            const feedback = getFeedback(guess, state.secret);
+
+            state.guesses.push(guess);
+            state.feedback.push(feedback);
+            state.currentRow++;
+
+            if (feedback.blacks === state.config.pegs) {
+                // Won!
+                state.gameOver = true;
+                renderBoard();
+                renderSecret(true);
+                const score = (state.config.maxGuesses - state.guesses.length + 1) * 100 *
+                    { easy: 1, medium: 2, hard: 3 }[state.difficulty];
+                GameUtils.stats.update(GAME_NAME, 'win');
+                GameUtils.highScores.add(GAME_NAME, GameUtils.playerName.get(1), score, { difficulty: state.difficulty });
+                updateStatus(`You cracked the code in ${state.guesses.length} guesses!`);
+                document.getElementById('status').className = 'game-status winner';
+                GameUtils.renderHighScores(GAME_NAME, 'high-scores');
+                return;
+            }
+
+            if (state.currentRow >= state.config.maxGuesses) {
+                // Lost
+                state.gameOver = true;
+                renderBoard();
+                renderSecret(true);
+                GameUtils.stats.update(GAME_NAME, 'loss');
+                updateStatus('Out of guesses! The code is revealed above.');
+                GameUtils.renderHighScores(GAME_NAME, 'high-scores');
+                return;
+            }
+
+            state.currentGuess = Array(state.config.pegs).fill(-1);
+            renderBoard();
+            document.getElementById('submit-btn').disabled = true;
+            updateStatus(`Guess ${state.currentRow + 1} of ${state.config.maxGuesses}`);
+        }
+
+        function getFeedback(guess, secret) {
+            let blacks = 0, whites = 0;
+            const secretRemaining = [];
+            const guessRemaining = [];
+
+            // Black pegs (exact match)
+            for (let i = 0; i < guess.length; i++) {
+                if (guess[i] === secret[i]) {
+                    blacks++;
+                } else {
+                    secretRemaining.push(secret[i]);
+                    guessRemaining.push(guess[i]);
+                }
+            }
+
+            // White pegs (color match, wrong position)
+            const secretCounts = {};
+            secretRemaining.forEach(c => secretCounts[c] = (secretCounts[c] || 0) + 1);
+            for (const c of guessRemaining) {
+                if (secretCounts[c] > 0) {
+                    whites++;
+                    secretCounts[c]--;
+                }
+            }
+
+            return { blacks, whites };
+        }
+
+        function updateStatus(text) {
+            document.getElementById('status').textContent = text;
+        }
+    </script>
+</body>
+</html>
