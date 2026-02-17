@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yahtzee - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .dice-area {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .die {
+            width: 70px;
+            height: 70px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #1e293b;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            position: relative;
+            user-select: none;
+        }
+
+        .die:hover { transform: translateY(-3px); }
+
+        .die.held {
+            box-shadow: 0 0 0 3px var(--primary-color), 0 4px 8px rgba(0,0,0,0.3);
+            transform: translateY(-5px);
+        }
+
+        .die.held::after {
+            content: 'HELD';
+            position: absolute;
+            bottom: -18px;
+            font-size: 0.6rem;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .die.rolling {
+            animation: dieRoll 0.4s ease-out;
+        }
+
+        @keyframes dieRoll {
+            0% { transform: rotateZ(0deg) scale(1); }
+            50% { transform: rotateZ(180deg) scale(0.8); }
+            100% { transform: rotateZ(360deg) scale(1); }
+        }
+
+        .die-dots { display: grid; width: 50px; height: 50px; padding: 6px; }
+
+        .die-dots .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1e293b;
+        }
+
+        .scorecard {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .scorecard th, .scorecard td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+        }
+
+        .scorecard th {
+            background: var(--dark-bg);
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .scorecard .score-cell {
+            text-align: center;
+            min-width: 60px;
+        }
+
+        .scorecard .clickable {
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .scorecard .clickable:hover {
+            background: var(--card-hover);
+            color: var(--primary-color);
+        }
+
+        .scorecard .scored {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .scorecard .preview {
+            color: var(--primary-color);
+            opacity: 0.7;
+        }
+
+        .scorecard .zero-preview {
+            color: var(--danger-color);
+            opacity: 0.7;
+        }
+
+        .scorecard .section-header {
+            background: var(--card-hover);
+            font-weight: 700;
+        }
+
+        .scorecard .total-row {
+            background: var(--dark-bg);
+            font-weight: 700;
+        }
+
+        .scorecard .total-row td {
+            color: var(--primary-color);
+        }
+
+        .rolls-remaining {
+            font-size: 1.2rem;
+            text-align: center;
+            margin: 10px 0;
+            color: var(--text-secondary);
+        }
+
+        .rolls-remaining span {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        @media (max-width: 480px) {
+            .die { width: 56px; height: 56px; font-size: 2rem; }
+            .scorecard th, .scorecard td { padding: 6px 8px; font-size: 0.9rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Yahtzee</h1>
+            <a href="../index.html" class="back-btn">Home</a>
+        </div>
+
+        <div id="setup-screen">
+            <div class="game-container" style="text-align: center;">
+                <h2 style="margin-bottom: 20px;">Yahtzee</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Roll dice and fill your scorecard for the highest score!</p>
+
+                <div class="btn-group" style="margin-top: 25px;">
+                    <button class="btn btn-success" onclick="startGame()">Start Game</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-screen" style="display: none;">
+            <div class="game-container">
+                <div class="dice-area" id="dice-area"></div>
+                <div class="rolls-remaining">Rolls remaining: <span id="rolls-left">3</span></div>
+                <div class="btn-group">
+                    <button class="btn" id="roll-btn" onclick="rollDice()">Roll Dice</button>
+                </div>
+            </div>
+
+            <div class="game-container">
+                <table class="scorecard" id="scorecard"></table>
+            </div>
+
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="newGame()">New Game</button>
+            </div>
+
+            <div class="game-container" style="margin-top: 20px;">
+                <h3 style="margin-bottom: 10px;">High Scores</h3>
+                <div id="high-scores"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        const GAME_NAME = 'yahtzee';
+
+        const DICE_FACES = ['', '\u2680', '\u2681', '\u2682', '\u2683', '\u2684', '\u2685'];
+
+        const CATEGORIES = [
+            { id: 'ones', name: 'Ones', section: 'upper' },
+            { id: 'twos', name: 'Twos', section: 'upper' },
+            { id: 'threes', name: 'Threes', section: 'upper' },
+            { id: 'fours', name: 'Fours', section: 'upper' },
+            { id: 'fives', name: 'Fives', section: 'upper' },
+            { id: 'sixes', name: 'Sixes', section: 'upper' },
+            { id: 'threeOfKind', name: '3 of a Kind', section: 'lower' },
+            { id: 'fourOfKind', name: '4 of a Kind', section: 'lower' },
+            { id: 'fullHouse', name: 'Full House', section: 'lower' },
+            { id: 'smallStraight', name: 'Small Straight', section: 'lower' },
+            { id: 'largeStraight', name: 'Large Straight', section: 'lower' },
+            { id: 'yahtzee', name: 'YAHTZEE', section: 'lower' },
+            { id: 'chance', name: 'Chance', section: 'lower' }
+        ];
+
+        let state = {
+            dice: [0, 0, 0, 0, 0],
+            held: [false, false, false, false, false],
+            rollsLeft: 3,
+            scores: {},
+            round: 0,
+            gameOver: false
+        };
+
+        function startGame() {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            newGame();
+        }
+
+        function newGame() {
+            state.dice = [0, 0, 0, 0, 0];
+            state.held = [false, false, false, false, false];
+            state.rollsLeft = 3;
+            state.scores = {};
+            state.round = 0;
+            state.gameOver = false;
+            renderDice();
+            renderScorecard();
+            updateRollBtn();
+            GameUtils.renderHighScores(GAME_NAME, 'high-scores');
+        }
+
+        function renderDice() {
+            const area = document.getElementById('dice-area');
+            area.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const die = document.createElement('div');
+                die.className = 'die' + (state.held[i] ? ' held' : '');
+                die.textContent = state.dice[i] > 0 ? DICE_FACES[state.dice[i]] : '';
+                die.addEventListener('click', () => toggleHold(i));
+                area.appendChild(die);
+            }
+        }
+
+        function toggleHold(i) {
+            if (state.rollsLeft === 3 || state.rollsLeft === 0 && state.dice[i] === 0) return;
+            if (state.dice[i] === 0) return;
+            state.held[i] = !state.held[i];
+            renderDice();
+        }
+
+        function rollDice() {
+            if (state.rollsLeft <= 0 || state.gameOver) return;
+
+            state.rollsLeft--;
+
+            for (let i = 0; i < 5; i++) {
+                if (!state.held[i]) {
+                    state.dice[i] = Math.floor(Math.random() * 6) + 1;
+                }
+            }
+
+            renderDice();
+            // Animate
+            document.querySelectorAll('.die').forEach((die, i) => {
+                if (!state.held[i]) die.classList.add('rolling');
+            });
+
+            renderScorecard();
+            updateRollBtn();
+        }
+
+        function updateRollBtn() {
+            document.getElementById('rolls-left').textContent = state.rollsLeft;
+            const btn = document.getElementById('roll-btn');
+            btn.disabled = state.rollsLeft <= 0 || state.gameOver;
+            btn.textContent = state.rollsLeft === 3 ? 'Roll Dice' : `Roll Again (${state.rollsLeft})`;
+        }
+
+        function calculateScore(catId, dice) {
+            const counts = Array(7).fill(0);
+            dice.forEach(d => counts[d]++);
+            const sum = dice.reduce((a, b) => a + b, 0);
+            const sorted = [...new Set(dice)].sort();
+
+            switch (catId) {
+                case 'ones': return counts[1] * 1;
+                case 'twos': return counts[2] * 2;
+                case 'threes': return counts[3] * 3;
+                case 'fours': return counts[4] * 4;
+                case 'fives': return counts[5] * 5;
+                case 'sixes': return counts[6] * 6;
+                case 'threeOfKind':
+                    return counts.some(c => c >= 3) ? sum : 0;
+                case 'fourOfKind':
+                    return counts.some(c => c >= 4) ? sum : 0;
+                case 'fullHouse':
+                    return (counts.includes(3) && counts.includes(2)) ? 25 : 0;
+                case 'smallStraight': {
+                    const s = [...new Set(dice)].sort((a,b) => a-b);
+                    const str = s.join('');
+                    return (str.includes('1234') || str.includes('2345') || str.includes('3456')) ? 30 : 0;
+                }
+                case 'largeStraight': {
+                    const s = [...new Set(dice)].sort((a,b) => a-b);
+                    return (s.length === 5 && s[4] - s[0] === 4) ? 40 : 0;
+                }
+                case 'yahtzee':
+                    return counts.some(c => c === 5) ? 50 : 0;
+                case 'chance':
+                    return sum;
+            }
+            return 0;
+        }
+
+        function scoreCategory(catId) {
+            if (state.scores[catId] !== undefined || state.rollsLeft === 3 || state.gameOver) return;
+
+            state.scores[catId] = calculateScore(catId, state.dice);
+            state.round++;
+
+            // Check yahtzee bonus
+            if (catId !== 'yahtzee' && state.scores.yahtzee === 50) {
+                const counts = Array(7).fill(0);
+                state.dice.forEach(d => counts[d]++);
+                if (counts.some(c => c === 5)) {
+                    state.scores.yahtzeeBonus = (state.scores.yahtzeeBonus || 0) + 100;
+                }
+            }
+
+            // Reset for next turn
+            state.dice = [0, 0, 0, 0, 0];
+            state.held = [false, false, false, false, false];
+            state.rollsLeft = 3;
+
+            if (state.round >= 13) {
+                state.gameOver = true;
+                endGame();
+            }
+
+            renderDice();
+            renderScorecard();
+            updateRollBtn();
+        }
+
+        function getUpperTotal() {
+            let sum = 0;
+            ['ones','twos','threes','fours','fives','sixes'].forEach(id => {
+                if (state.scores[id] !== undefined) sum += state.scores[id];
+            });
+            return sum;
+        }
+
+        function getUpperBonus() {
+            return getUpperTotal() >= 63 ? 35 : 0;
+        }
+
+        function getLowerTotal() {
+            let sum = 0;
+            ['threeOfKind','fourOfKind','fullHouse','smallStraight','largeStraight','yahtzee','chance'].forEach(id => {
+                if (state.scores[id] !== undefined) sum += state.scores[id];
+            });
+            sum += state.scores.yahtzeeBonus || 0;
+            return sum;
+        }
+
+        function getGrandTotal() {
+            return getUpperTotal() + getUpperBonus() + getLowerTotal();
+        }
+
+        function renderScorecard() {
+            const table = document.getElementById('scorecard');
+            const hasDice = state.dice.some(d => d > 0);
+
+            let html = '<thead><tr><th>Category</th><th class="score-cell">Score</th></tr></thead><tbody>';
+
+            // Upper section
+            html += '<tr class="section-header"><td colspan="2">Upper Section</td></tr>';
+            CATEGORIES.filter(c => c.section === 'upper').forEach(cat => {
+                const scored = state.scores[cat.id] !== undefined;
+                const preview = hasDice && !scored ? calculateScore(cat.id, state.dice) : null;
+                html += `<tr>
+                    <td>${cat.name}</td>
+                    <td class="score-cell ${scored ? 'scored' : (preview !== null ? 'clickable' : '')}"
+                        ${!scored && preview !== null ? `onclick="scoreCategory('${cat.id}')"` : ''}>`;
+                if (scored) {
+                    html += state.scores[cat.id];
+                } else if (preview !== null) {
+                    html += `<span class="${preview > 0 ? 'preview' : 'zero-preview'}">${preview}</span>`;
+                } else {
+                    html += '-';
+                }
+                html += '</td></tr>';
+            });
+
+            const upperTotal = getUpperTotal();
+            const bonus = getUpperBonus();
+            html += `<tr class="total-row"><td>Upper Bonus (63+)</td><td class="score-cell">${bonus > 0 ? bonus : `${upperTotal}/63`}</td></tr>`;
+            html += `<tr class="total-row"><td>Upper Total</td><td class="score-cell">${upperTotal + bonus}</td></tr>`;
+
+            // Lower section
+            html += '<tr class="section-header"><td colspan="2">Lower Section</td></tr>';
+            CATEGORIES.filter(c => c.section === 'lower').forEach(cat => {
+                const scored = state.scores[cat.id] !== undefined;
+                const preview = hasDice && !scored ? calculateScore(cat.id, state.dice) : null;
+                html += `<tr>
+                    <td>${cat.name}</td>
+                    <td class="score-cell ${scored ? 'scored' : (preview !== null ? 'clickable' : '')}"
+                        ${!scored && preview !== null ? `onclick="scoreCategory('${cat.id}')"` : ''}>`;
+                if (scored) {
+                    html += state.scores[cat.id];
+                } else if (preview !== null) {
+                    html += `<span class="${preview > 0 ? 'preview' : 'zero-preview'}">${preview}</span>`;
+                } else {
+                    html += '-';
+                }
+                html += '</td></tr>';
+            });
+
+            if (state.scores.yahtzeeBonus) {
+                html += `<tr><td>Yahtzee Bonus</td><td class="score-cell scored">${state.scores.yahtzeeBonus}</td></tr>`;
+            }
+
+            html += `<tr class="total-row"><td>Lower Total</td><td class="score-cell">${getLowerTotal()}</td></tr>`;
+            html += `<tr class="total-row" style="font-size:1.1rem;"><td><strong>Grand Total</strong></td><td class="score-cell"><strong>${getGrandTotal()}</strong></td></tr>`;
+
+            html += '</tbody>';
+            table.innerHTML = html;
+        }
+
+        function endGame() {
+            const total = getGrandTotal();
+            GameUtils.stats.update(GAME_NAME, 'win');
+            GameUtils.highScores.add(GAME_NAME, GameUtils.playerName.get(1), total);
+
+            GameUtils.showModal('Game Over!',
+                `Final Score: ${total}<br>${getUpperBonus() > 0 ? 'Upper bonus earned! (+35)' : `Upper section: ${getUpperTotal()}/63`}`,
+                [
+                    { text: 'Play Again', primary: true, action: newGame },
+                    { text: 'OK' }
+                ]
+            );
+            GameUtils.renderHighScores(GAME_NAME, 'high-scores');
+        }
+    </script>
+</body>
+</html>
