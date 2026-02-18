@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 28 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 29 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
@@ -27,7 +27,8 @@ A collection of 28 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── spotit.html      # Symbol-matching card game
     ├── qwirkle.html     # Tile-matching strategy game
     ├── numbermunchers.html # Math arcade with Troggles
-    └── wordsearch.html     # Word finding puzzle
+    ├── wordsearch.html     # Word finding puzzle
+    └── artillery.html      # Gorillas-style artillery game
 ```
 
 ## Key Features
@@ -152,6 +153,17 @@ A collection of 28 classic games built with vanilla HTML, CSS, and JavaScript. D
 - Solo mode: find all words, score based on completion time
 - vs Computer mode: race against AI opponent (Easy 15s, Medium 8s, Hard 4s per word)
 - Score = words found × 100 − elapsed seconds × difficulty multiplier
+
+### Artillery
+- Gorillas/Bang Bang-style artillery game with canvas rendering
+- Random cityscape with starry night sky; two gorillas on buildings
+- Turn-based: set angle (0-180°) and power (0-100), fire banana projectile
+- Parabolic trajectory with gravity + wind (randomized each round)
+- Explosions create craters in buildings via 1D heightmap deformation
+- Best of 3/5/7 rounds; match scoring with high scores
+- AI difficulty: Easy (random), Medium (coarse search + noise), Hard (brute-force simulation, small noise)
+- Controls: +/- buttons, arrow keys, Space/Enter to fire
+- 2-player mode with device-passing modal
 
 ## Development
 To test locally:

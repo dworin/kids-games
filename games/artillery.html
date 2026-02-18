@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Artillery - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .game-canvas-container {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        canvas {
+            background: #0a0a2e;
+            border-radius: 10px;
+            max-width: 100%;
+            height: auto;
+            touch-action: manipulation;
+        }
+        .controls-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .control-group label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            min-width: 50px;
+        }
+        .control-group input[type="number"] {
+            width: 60px;
+            padding: 6px 4px;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1rem;
+        }
+        .adj-btn {
+            width: 30px;
+            height: 30px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .adj-btn:hover { background: var(--primary-dark); }
+        .fire-btn {
+            padding: 8px 30px;
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 1px;
+        }
+        .fire-btn:hover { background: #dc2626; }
+        .fire-btn:disabled { opacity: 0.4; cursor: default; }
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 8px 14px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        .info-bar .wind-display {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .score-display {
+            display: flex;
+            gap: 20px;
+        }
+        .score-display span {
+            font-weight: 600;
+        }
+        .p1-color { color: #e74c3c; }
+        .p2-color { color: #3498db; }
+        #setup-screen, #gameover-screen {
+            text-align: center;
+        }
+        .setup-options {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .setup-options label {
+            color: var(--text-secondary);
+            margin-right: 8px;
+        }
+        .setup-options select {
+            padding: 8px 12px;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        .turn-indicator {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .gameover-stats {
+            margin: 20px 0;
+            font-size: 1.1rem;
+            line-height: 2;
+        }
+        @media (max-width: 600px) {
+            .controls-row { gap: 10px; }
+            .control-group label { min-width: 40px; font-size: 0.8rem; }
+            .control-group input[type="number"] { width: 50px; font-size: 0.9rem; }
+            .fire-btn { padding: 8px 20px; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Artillery</h1>
+            <button class="back-btn" onclick="GameUtils.goToLauncher()">Home</button>
+        </div>
+
+        <div class="game-container" id="setup-screen">
+            <h2>Artillery</h2>
+            <p style="color: var(--text-secondary); margin: 10px 0;">Lob bananas at your opponent! Adjust angle and power, account for wind.</p>
+            <div class="setup-options">
+                <div>
+                    <label for="mode-select">Mode:</label>
+                    <select id="mode-select">
+                        <option value="1p">1 Player vs AI</option>
+                        <option value="2p">2 Players</option>
+                    </select>
+                </div>
+                <div id="difficulty-row">
+                    <label for="diff-select">AI Difficulty:</label>
+                    <select id="diff-select">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="rounds-select">Best of:</label>
+                    <select id="rounds-select">
+                        <option value="3" selected>3</option>
+                        <option value="5">5</option>
+                        <option value="7">7</option>
+                    </select>
+                </div>
+                <button class="btn btn-success" onclick="startGame()" style="margin-top: 10px;">Start Game</button>
+            </div>
+            <div style="margin-top: 20px;">
+                <h3>High Scores</h3>
+                <div id="high-scores"></div>
+            </div>
+            <div style="margin-top: 15px;">
+                <h3>Statistics</h3>
+                <div id="game-stats"></div>
+            </div>
+        </div>
+
+        <div class="game-container" id="game-screen" style="display:none;">
+            <div class="info-bar">
+                <div class="score-display">
+                    <span class="p1-color" id="p1-score-label">P1: 0</span>
+                    <span class="p2-color" id="p2-score-label">P2: 0</span>
+                </div>
+                <div class="wind-display" id="wind-display">Wind: None</div>
+                <div class="turn-indicator" id="turn-indicator">Player 1's Turn</div>
+            </div>
+            <div class="game-canvas-container">
+                <canvas id="gameCanvas" width="800" height="500"></canvas>
+            </div>
+            <div class="controls-row" id="controls-row">
+                <div class="control-group">
+                    <label>Angle:</label>
+                    <button class="adj-btn" onclick="adjustAngle(-5)">-</button>
+                    <input type="number" id="angle-input" value="45" min="0" max="180" step="1">
+                    <button class="adj-btn" onclick="adjustAngle(5)">+</button>
+                </div>
+                <div class="control-group">
+                    <label>Power:</label>
+                    <button class="adj-btn" onclick="adjustPower(-5)">-</button>
+                    <input type="number" id="power-input" value="50" min="1" max="100" step="1">
+                    <button class="adj-btn" onclick="adjustPower(5)">+</button>
+                </div>
+                <button class="fire-btn" id="fire-btn" onclick="fire()">FIRE</button>
+            </div>
+        </div>
+
+        <div class="game-container" id="gameover-screen" style="display:none;">
+            <h2 id="gameover-title">Game Over</h2>
+            <div class="gameover-stats" id="gameover-stats"></div>
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="startGame()">Play Again</button>
+                <button class="btn" onclick="showSetup()">Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+    // ========== GAME STATE ==========
+    const CANVAS_W = 800, CANVAS_H = 500;
+    const GRAVITY = 0.15;
+    const GORILLA_W = 30, GORILLA_H = 34;
+    const EXPLOSION_RADIUS = 35;
+
+    let canvas, ctx;
+    let gameState = {
+        mode: '1p', difficulty: 'medium', bestOf: 3,
+        terrain: [], buildings: [],
+        gorillas: [{x:0,y:0},{x:0,y:0}],
+        scores: [0, 0],
+        currentPlayer: 0,
+        wind: 0,
+        projectile: null,
+        animating: false,
+        roundOver: false,
+        matchOver: false,
+        stars: [],
+        trail: [],
+        explosions: [],
+        playerNames: ['Player 1', 'Player 2']
+    };
+
+    // ========== SETUP ==========
+    document.getElementById('mode-select').addEventListener('change', (e) => {
+        document.getElementById('difficulty-row').style.display = e.target.value === '1p' ? '' : 'none';
+    });
+
+    function showSetup() {
+        document.getElementById('setup-screen').style.display = '';
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('gameover-screen').style.display = 'none';
+        GameUtils.renderHighScores('artillery', 'high-scores');
+        GameUtils.renderStats('artillery', 'game-stats');
+    }
+
+    function startGame() {
+        gameState.mode = document.getElementById('mode-select').value;
+        gameState.difficulty = document.getElementById('diff-select').value;
+        gameState.bestOf = parseInt(document.getElementById('rounds-select').value);
+        gameState.scores = [0, 0];
+        gameState.currentPlayer = 0;
+        gameState.matchOver = false;
+        gameState.playerNames[0] = GameUtils.playerName.get(1);
+        gameState.playerNames[1] = gameState.mode === '1p' ? 'Computer' : GameUtils.playerName.get(2);
+
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = '';
+        document.getElementById('gameover-screen').style.display = 'none';
+
+        canvas = document.getElementById('gameCanvas');
+        ctx = canvas.getContext('2d');
+
+        startRound();
+    }
+
+    // ========== ROUND INIT ==========
+    function startRound() {
+        gameState.roundOver = false;
+        gameState.animating = false;
+        gameState.projectile = null;
+        gameState.trail = [];
+        gameState.explosions = [];
+
+        generateStars();
+        generateTerrain();
+        placeGorillas();
+        randomizeWind();
+
+        gameState.currentPlayer = 0;
+        updateUI();
+        render();
+
+        // If AI goes first (shouldn't normally, but just in case)
+        if (gameState.mode === '1p' && gameState.currentPlayer === 1) {
+            scheduleAI();
+        }
+    }
+
+    function generateStars() {
+        gameState.stars = [];
+        for (let i = 0; i < 80; i++) {
+            gameState.stars.push({
+                x: Math.random() * CANVAS_W,
+                y: Math.random() * CANVAS_H * 0.5,
+                size: Math.random() * 2 + 0.5,
+                twinkle: Math.random() * Math.PI * 2
+            });
+        }
+    }
+
+    function generateTerrain() {
+        // Create buildings
+        const buildings = [];
+        const minBldgW = 40, maxBldgW = 75;
+        const minBldgH = 100, maxBldgH = 320;
+        let x = 0;
+        while (x < CANVAS_W) {
+            const w = Math.floor(Math.random() * (maxBldgW - minBldgW) + minBldgW);
+            const h = Math.floor(Math.random() * (maxBldgH - minBldgH) + minBldgH);
+            const colors = ['#2c3e50', '#34495e', '#1a252f', '#2d3436', '#283747', '#1c2833', '#212f3d'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            buildings.push({ x, w, h, color });
+            x += w;
+        }
+        gameState.buildings = buildings;
+
+        // Build heightmap from buildings
+        const terrain = new Array(CANVAS_W).fill(CANVAS_H);
+        for (const b of buildings) {
+            for (let px = b.x; px < b.x + b.w && px < CANVAS_W; px++) {
+                terrain[px] = CANVAS_H - b.h;
+            }
+        }
+        gameState.terrain = terrain;
+    }
+
+    function placeGorillas() {
+        const terrain = gameState.terrain;
+        const buildings = gameState.buildings;
+
+        // Pick a building in the left third for P1 and right third for P2
+        const leftBuildings = buildings.filter(b => b.x + b.w / 2 < CANVAS_W * 0.35);
+        const rightBuildings = buildings.filter(b => b.x + b.w / 2 > CANVAS_W * 0.65);
+
+        const b1 = leftBuildings[Math.floor(Math.random() * leftBuildings.length)] || buildings[1];
+        const b2 = rightBuildings[Math.floor(Math.random() * rightBuildings.length)] || buildings[buildings.length - 2];
+
+        const g1x = Math.floor(b1.x + b1.w / 2 - GORILLA_W / 2);
+        const g1y = (CANVAS_H - b1.h) - GORILLA_H;
+        const g2x = Math.floor(b2.x + b2.w / 2 - GORILLA_W / 2);
+        const g2y = (CANVAS_H - b2.h) - GORILLA_H;
+
+        gameState.gorillas[0] = { x: g1x, y: g1y };
+        gameState.gorillas[1] = { x: g2x, y: g2y };
+    }
+
+    function randomizeWind() {
+        gameState.wind = (Math.random() - 0.5) * 0.08;
+    }
+
+    // ========== UI ==========
+    function updateUI() {
+        const gs = gameState;
+        const p1Name = gs.playerNames[0];
+        const p2Name = gs.playerNames[1];
+        document.getElementById('p1-score-label').textContent = `${p1Name}: ${gs.scores[0]}`;
+        document.getElementById('p2-score-label').textContent = `${p2Name}: ${gs.scores[1]}`;
+
+        const windStr = gs.wind === 0 ? 'None' :
+            (gs.wind > 0 ? `>>> ${(gs.wind * 100).toFixed(1)}` : `${(Math.abs(gs.wind) * 100).toFixed(1)} <<<`);
+        document.getElementById('wind-display').textContent = `Wind: ${windStr}`;
+
+        const currentName = gs.playerNames[gs.currentPlayer];
+        const indicator = document.getElementById('turn-indicator');
+        indicator.textContent = `${currentName}'s Turn`;
+        indicator.className = 'turn-indicator ' + (gs.currentPlayer === 0 ? 'p1-color' : 'p2-color');
+
+        const controls = document.getElementById('controls-row');
+        const isAI = gs.mode === '1p' && gs.currentPlayer === 1;
+        controls.style.opacity = (gs.animating || isAI) ? '0.5' : '1';
+        document.getElementById('fire-btn').disabled = gs.animating || isAI;
+    }
+
+    function adjustAngle(delta) {
+        const inp = document.getElementById('angle-input');
+        inp.value = Math.max(0, Math.min(180, parseInt(inp.value || 45) + delta));
+        render();
+    }
+
+    function adjustPower(delta) {
+        const inp = document.getElementById('power-input');
+        inp.value = Math.max(1, Math.min(100, parseInt(inp.value || 50) + delta));
+        render();
+    }
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+        if (gameState.animating || gameState.roundOver || gameState.matchOver) return;
+        if (gameState.mode === '1p' && gameState.currentPlayer === 1) return;
+        if (document.getElementById('game-screen').style.display === 'none') return;
+
+        switch (e.key) {
+            case 'ArrowLeft': adjustAngle(-1); e.preventDefault(); break;
+            case 'ArrowRight': adjustAngle(1); e.preventDefault(); break;
+            case 'ArrowUp': adjustPower(1); e.preventDefault(); break;
+            case 'ArrowDown': adjustPower(-1); e.preventDefault(); break;
+            case ' ':
+            case 'Enter':
+                fire();
+                e.preventDefault();
+                break;
+        }
+    });
+
+    // ========== RENDERING ==========
+    function render() {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+        drawSky();
+        drawStars();
+        drawBuildings();
+        drawTerrain();
+        drawGorillas();
+        drawTrail();
+        drawExplosions();
+        drawProjectile();
+        drawWindArrow();
+
+        // Draw aim preview if not animating
+        if (!gameState.animating && !gameState.roundOver) {
+            drawAimPreview();
+        }
+    }
+
+    function drawSky() {
+        const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+        grad.addColorStop(0, '#0a0a2e');
+        grad.addColorStop(0.6, '#151545');
+        grad.addColorStop(1, '#1a1a3e');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    }
+
+    function drawStars() {
+        const time = Date.now() / 1000;
+        for (const s of gameState.stars) {
+            const alpha = 0.5 + 0.5 * Math.sin(time * 2 + s.twinkle);
+            ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawBuildings() {
+        for (const b of gameState.buildings) {
+            ctx.fillStyle = b.color;
+            ctx.fillRect(b.x, CANVAS_H - b.h, b.w, b.h);
+
+            // Windows
+            const winW = 6, winH = 8, gapX = 14, gapY = 16;
+            const startX = b.x + 6;
+            const startY = CANVAS_H - b.h + 10;
+            for (let wy = startY; wy < CANVAS_H - 10; wy += gapY) {
+                for (let wx = startX; wx < b.x + b.w - 10; wx += gapX) {
+                    const lit = Math.random() > 0.3;
+                    ctx.fillStyle = lit ? '#f5e642' : '#1a1a2e';
+                    ctx.fillRect(wx, wy, winW, winH);
+                }
+            }
+        }
+    }
+
+    function drawTerrain() {
+        // Draw the terrain heightmap on top of buildings to reflect destruction
+        const terrain = gameState.terrain;
+        ctx.fillStyle = '#0a0a2e'; // sky color to "erase" destroyed building parts
+        for (let x = 0; x < CANVAS_W; x++) {
+            // Find the building at this x
+            const bldg = gameState.buildings.find(b => x >= b.x && x < b.x + b.w);
+            if (bldg) {
+                const bldgTop = CANVAS_H - bldg.h;
+                const terrainTop = terrain[x];
+                if (terrainTop > bldgTop) {
+                    // Terrain has been lowered by explosion - fill gap with sky
+                    ctx.fillRect(x, bldgTop, 1, terrainTop - bldgTop);
+                }
+            }
+        }
+    }
+
+    function drawGorillas() {
+        for (let i = 0; i < 2; i++) {
+            const g = gameState.gorillas[i];
+            drawGorilla(g.x, g.y, i);
+        }
+    }
+
+    function drawGorilla(x, y, playerIdx) {
+        const color = playerIdx === 0 ? '#c0392b' : '#2980b9';
+        const darkColor = playerIdx === 0 ? '#922b21' : '#1f618d';
+
+        // Body
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x + 5, y + 12, 20, 16);
+
+        // Head
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.arc(x + 15, y + 10, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Face
+        ctx.fillStyle = '#D2A679';
+        ctx.beginPath();
+        ctx.arc(x + 15, y + 11, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(x + 12, y + 9, 1.5, 0, Math.PI * 2);
+        ctx.arc(x + 18, y + 9, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Mouth
+        ctx.beginPath();
+        ctx.arc(x + 15, y + 14, 3, 0, Math.PI);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Arms
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x, y + 13, 7, 6);
+        ctx.fillRect(x + 23, y + 13, 7, 6);
+
+        // Legs
+        ctx.fillRect(x + 7, y + 27, 7, 7);
+        ctx.fillRect(x + 16, y + 27, 7, 7);
+
+        // Player indicator band
+        ctx.fillStyle = color;
+        ctx.fillRect(x + 5, y + 20, 20, 4);
+    }
+
+    function drawTrail() {
+        for (let i = 0; i < gameState.trail.length; i++) {
+            const t = gameState.trail[i];
+            const alpha = (i / gameState.trail.length) * 0.6;
+            ctx.fillStyle = `rgba(255, 255, 100, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawProjectile() {
+        const p = gameState.projectile;
+        if (!p) return;
+
+        // Banana
+        ctx.fillStyle = '#f1c40f';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#d4ac0d';
+        ctx.beginPath();
+        ctx.arc(p.x - 1, p.y - 1, 2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    function drawExplosions() {
+        for (let i = gameState.explosions.length - 1; i >= 0; i--) {
+            const exp = gameState.explosions[i];
+            exp.frame++;
+            const progress = exp.frame / exp.maxFrames;
+            if (progress >= 1) {
+                gameState.explosions.splice(i, 1);
+                continue;
+            }
+            const radius = exp.radius * (0.5 + progress * 0.5);
+            const alpha = 1 - progress;
+
+            // Outer glow
+            ctx.fillStyle = `rgba(255, 100, 0, ${alpha * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(exp.x, exp.y, radius * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main fireball
+            ctx.fillStyle = `rgba(255, 200, 50, ${alpha * 0.8})`;
+            ctx.beginPath();
+            ctx.arc(exp.x, exp.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Core
+            ctx.fillStyle = `rgba(255, 255, 200, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(exp.x, exp.y, radius * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function drawWindArrow() {
+        const wind = gameState.wind;
+        if (Math.abs(wind) < 0.001) return;
+
+        const cx = CANVAS_W / 2;
+        const cy = 20;
+        const len = Math.abs(wind) * 500;
+        const dir = wind > 0 ? 1 : -1;
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - len * dir, cy);
+        ctx.lineTo(cx + len * dir, cy);
+        // Arrowhead
+        ctx.lineTo(cx + len * dir - 8 * dir, cy - 5);
+        ctx.moveTo(cx + len * dir, cy);
+        ctx.lineTo(cx + len * dir - 8 * dir, cy + 5);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('WIND', cx, cy + 15);
+    }
+
+    function drawAimPreview() {
+        const cp = gameState.currentPlayer;
+        const g = gameState.gorillas[cp];
+        const angle = parseFloat(document.getElementById('angle-input').value) || 45;
+        const power = parseFloat(document.getElementById('power-input').value) || 50;
+
+        const launchX = g.x + GORILLA_W / 2;
+        const launchY = g.y;
+
+        const angleRad = angle * Math.PI / 180;
+        const speed = power * 0.12;
+        const vx = (cp === 0 ? 1 : -1) * speed * Math.cos(angleRad);
+        const vy = -speed * Math.sin(angleRad);
+
+        ctx.strokeStyle = `rgba(255,255,255,0.3)`;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(launchX, launchY);
+
+        let px = launchX, py = launchY;
+        let pvx = vx, pvy = vy;
+        for (let i = 0; i < 30; i++) {
+            pvx += gameState.wind;
+            pvy += GRAVITY;
+            px += pvx;
+            py += pvy;
+            if (py > CANVAS_H || px < 0 || px > CANVAS_W) break;
+            ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // ========== FIRING ==========
+    function fire() {
+        if (gameState.animating || gameState.roundOver) return;
+        if (gameState.mode === '1p' && gameState.currentPlayer === 1) return;
+
+        const angle = parseFloat(document.getElementById('angle-input').value) || 45;
+        const power = parseFloat(document.getElementById('power-input').value) || 50;
+
+        launchProjectile(angle, power);
+    }
+
+    function launchProjectile(angle, power) {
+        const cp = gameState.currentPlayer;
+        const g = gameState.gorillas[cp];
+        const launchX = g.x + GORILLA_W / 2;
+        const launchY = g.y;
+
+        const angleRad = angle * Math.PI / 180;
+        const speed = power * 0.12;
+        const vx = (cp === 0 ? 1 : -1) * speed * Math.cos(angleRad);
+        const vy = -speed * Math.sin(angleRad);
+
+        gameState.projectile = { x: launchX, y: launchY, vx, vy };
+        gameState.animating = true;
+        gameState.trail = [];
+        updateUI();
+        animateProjectile();
+    }
+
+    function animateProjectile() {
+        const p = gameState.projectile;
+        if (!p) return;
+
+        p.vx += gameState.wind;
+        p.vy += GRAVITY;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        gameState.trail.push({ x: p.x, y: p.y });
+        if (gameState.trail.length > 100) gameState.trail.shift();
+
+        // Check collisions
+        const collision = checkCollision(p.x, p.y);
+        if (collision) {
+            handleCollision(collision, p.x, p.y);
+            return;
+        }
+
+        // Off screen
+        if (p.x < -50 || p.x > CANVAS_W + 50 || p.y > CANVAS_H + 50) {
+            // Miss - switch turns
+            gameState.projectile = null;
+            gameState.animating = false;
+            gameState.trail = [];
+            switchTurn();
+            return;
+        }
+
+        render();
+        requestAnimationFrame(animateProjectile);
+    }
+
+    function checkCollision(px, py) {
+        const ix = Math.floor(px);
+
+        // Hit opponent gorilla?
+        const opponent = 1 - gameState.currentPlayer;
+        const og = gameState.gorillas[opponent];
+        if (px >= og.x && px <= og.x + GORILLA_W && py >= og.y && py <= og.y + GORILLA_H) {
+            return { type: 'gorilla', player: opponent };
+        }
+
+        // Hit terrain?
+        if (ix >= 0 && ix < CANVAS_W && py >= gameState.terrain[ix]) {
+            return { type: 'terrain', x: ix, y: py };
+        }
+
+        // Hit self? (only after projectile has traveled a bit)
+        const self = gameState.gorillas[gameState.currentPlayer];
+        if (gameState.trail.length > 15) {
+            if (px >= self.x && px <= self.x + GORILLA_W && py >= self.y && py <= self.y + GORILLA_H) {
+                return { type: 'gorilla', player: gameState.currentPlayer };
+            }
+        }
+
+        return null;
+    }
+
+    function handleCollision(collision, px, py) {
+        gameState.projectile = null;
+        gameState.animating = false;
+
+        // Create explosion
+        createExplosion(px, py);
+        deformTerrain(px, py, EXPLOSION_RADIUS);
+
+        if (collision.type === 'gorilla') {
+            // Someone was hit!
+            const winner = 1 - collision.player;
+            gameState.scores[winner]++;
+            gameState.roundOver = true;
+            updateUI();
+
+            // Animate explosion then show result
+            const explodeInterval = setInterval(() => {
+                render();
+                if (gameState.explosions.length === 0) {
+                    clearInterval(explodeInterval);
+                    checkMatchEnd(winner, collision.player);
+                }
+            }, 16);
+        } else {
+            // Terrain hit - switch turns after explosion
+            const explodeInterval = setInterval(() => {
+                render();
+                if (gameState.explosions.length === 0) {
+                    clearInterval(explodeInterval);
+                    gameState.trail = [];
+                    switchTurn();
+                }
+            }, 16);
+        }
+    }
+
+    function createExplosion(x, y) {
+        gameState.explosions.push({
+            x, y, radius: EXPLOSION_RADIUS, frame: 0, maxFrames: 40
+        });
+    }
+
+    function deformTerrain(cx, cy, radius) {
+        const terrain = gameState.terrain;
+        for (let x = Math.max(0, Math.floor(cx - radius)); x < Math.min(CANVAS_W, Math.ceil(cx + radius)); x++) {
+            const dx = x - cx;
+            const maxDy = Math.sqrt(radius * radius - dx * dx);
+            const deformTop = cy - maxDy;
+            const deformBottom = cy + maxDy;
+
+            if (terrain[x] < deformBottom && terrain[x] > deformTop) {
+                // Lower the terrain at this column
+                terrain[x] = Math.min(CANVAS_H, deformBottom);
+            } else if (terrain[x] >= deformTop && terrain[x] <= deformBottom) {
+                terrain[x] = Math.min(CANVAS_H, deformBottom);
+            }
+        }
+
+        // Check if gorillas need to fall due to terrain deformation
+        for (let i = 0; i < 2; i++) {
+            const g = gameState.gorillas[i];
+            const gCenterX = Math.floor(g.x + GORILLA_W / 2);
+            if (gCenterX >= 0 && gCenterX < CANVAS_W) {
+                const groundY = terrain[gCenterX];
+                if (g.y + GORILLA_H < groundY) {
+                    // Gorilla needs to fall
+                    g.y = groundY - GORILLA_H;
+                }
+            }
+        }
+    }
+
+    function switchTurn() {
+        gameState.currentPlayer = 1 - gameState.currentPlayer;
+        randomizeWind();
+        updateUI();
+        render();
+
+        if (gameState.mode === '1p' && gameState.currentPlayer === 1) {
+            scheduleAI();
+        }
+    }
+
+    function checkMatchEnd(winner, loser) {
+        const winsNeeded = Math.ceil(gameState.bestOf / 2);
+        if (gameState.scores[winner] >= winsNeeded) {
+            // Match over
+            gameState.matchOver = true;
+            endMatch(winner);
+        } else {
+            // Show round result then start new round
+            const winnerName = gameState.playerNames[winner];
+            GameUtils.showModal('Round Over!', `${winnerName} wins this round!<br>Score: ${gameState.scores[0]} - ${gameState.scores[1]}`, [
+                { text: 'Next Round', primary: true, action: () => { startRound(); } }
+            ]);
+        }
+    }
+
+    function endMatch(winner) {
+        const winnerName = gameState.playerNames[winner];
+        const loserName = gameState.playerNames[1 - winner];
+
+        // Update stats
+        if (gameState.mode === '1p') {
+            GameUtils.stats.update('artillery', winner === 0 ? 'win' : 'loss');
+        } else {
+            GameUtils.stats.update('artillery', 'win');
+        }
+
+        // Add high score (rounds won as score)
+        const score = gameState.scores[winner] * 100 + (gameState.bestOf - gameState.scores[1 - winner]) * 10;
+        GameUtils.highScores.add('artillery', winnerName, score, {
+            rounds: `${gameState.scores[0]}-${gameState.scores[1]}`,
+            difficulty: gameState.mode === '1p' ? gameState.difficulty : '2P'
+        });
+
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('gameover-screen').style.display = '';
+        document.getElementById('gameover-title').textContent = `${winnerName} Wins!`;
+        document.getElementById('gameover-stats').innerHTML = `
+            <p>Final Score: <span class="p1-color">${gameState.playerNames[0]} ${gameState.scores[0]}</span> - <span class="p2-color">${gameState.scores[1]} ${gameState.playerNames[1]}</span></p>
+            <p>Best of ${gameState.bestOf} | ${gameState.mode === '1p' ? 'Difficulty: ' + gameState.difficulty : '2 Player'}</p>
+        `;
+    }
+
+    // ========== AI ==========
+    function scheduleAI() {
+        setTimeout(() => {
+            if (gameState.roundOver || gameState.matchOver) return;
+            const { angle, power } = computeAI();
+            document.getElementById('angle-input').value = Math.round(angle);
+            document.getElementById('power-input').value = Math.round(power);
+            render();
+            setTimeout(() => {
+                launchProjectile(angle, power);
+            }, 500);
+        }, 800);
+    }
+
+    function computeAI() {
+        const diff = gameState.difficulty;
+        const aiG = gameState.gorillas[1];
+        const targetG = gameState.gorillas[0];
+        const launchX = aiG.x + GORILLA_W / 2;
+        const launchY = aiG.y;
+        const targetX = targetG.x + GORILLA_W / 2;
+        const targetY = targetG.y + GORILLA_H / 2;
+
+        if (diff === 'easy') {
+            return {
+                angle: 30 + Math.random() * 120,
+                power: 20 + Math.random() * 80
+            };
+        }
+
+        if (diff === 'hard') {
+            // Brute-force search for best angle/power
+            let bestAngle = 45, bestPower = 50, bestDist = Infinity;
+            for (let a = 10; a <= 170; a += 2) {
+                for (let p = 10; p <= 100; p += 2) {
+                    const dist = simulateShot(launchX, launchY, a, p, -1, targetX, targetY);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestAngle = a;
+                        bestPower = p;
+                    }
+                }
+            }
+            // Fine-tune
+            for (let a = bestAngle - 3; a <= bestAngle + 3; a += 0.5) {
+                for (let p = bestPower - 3; p <= bestPower + 3; p += 0.5) {
+                    const dist = simulateShot(launchX, launchY, a, p, -1, targetX, targetY);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestAngle = a;
+                        bestPower = p;
+                    }
+                }
+            }
+            // Small noise
+            bestAngle += (Math.random() - 0.5) * 4;
+            bestPower += (Math.random() - 0.5) * 4;
+            return { angle: Math.max(5, Math.min(175, bestAngle)), power: Math.max(5, Math.min(100, bestPower)) };
+        }
+
+        // Medium: approximate targeting with moderate noise
+        let bestAngle = 45, bestPower = 50, bestDist = Infinity;
+        for (let a = 10; a <= 170; a += 5) {
+            for (let p = 10; p <= 100; p += 5) {
+                const dist = simulateShot(launchX, launchY, a, p, -1, targetX, targetY);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestAngle = a;
+                    bestPower = p;
+                }
+            }
+        }
+        bestAngle += (Math.random() - 0.5) * 15;
+        bestPower += (Math.random() - 0.5) * 15;
+        return { angle: Math.max(5, Math.min(175, bestAngle)), power: Math.max(5, Math.min(100, bestPower)) };
+    }
+
+    function simulateShot(sx, sy, angle, power, dir, tx, ty) {
+        const angleRad = angle * Math.PI / 180;
+        const speed = power * 0.12;
+        let vx = dir * speed * Math.cos(angleRad);
+        let vy = -speed * Math.sin(angleRad);
+        let px = sx, py = sy;
+        let minDist = Infinity;
+
+        for (let step = 0; step < 600; step++) {
+            vx += gameState.wind;
+            vy += GRAVITY;
+            px += vx;
+            py += vy;
+
+            const dist = Math.hypot(px - tx, py - ty);
+            if (dist < minDist) minDist = dist;
+
+            // Hit terrain or out of bounds
+            const ix = Math.floor(px);
+            if (ix >= 0 && ix < CANVAS_W && py >= gameState.terrain[ix]) break;
+            if (px < -50 || px > CANVAS_W + 50 || py > CANVAS_H + 50) break;
+        }
+        return minDist;
+    }
+
+    // ========== ANIMATION LOOP FOR TWINKLING ==========
+    let twinkleRAF;
+    function startTwinkle() {
+        if (twinkleRAF) cancelAnimationFrame(twinkleRAF);
+        function tick() {
+            if (document.getElementById('game-screen').style.display !== 'none' && !gameState.animating) {
+                render();
+            }
+            twinkleRAF = requestAnimationFrame(tick);
+        }
+        // Throttle to ~10fps for twinkling only
+        let lastTime = 0;
+        function throttledTick(time) {
+            if (time - lastTime > 100) {
+                lastTime = time;
+                if (document.getElementById('game-screen').style.display !== 'none' && !gameState.animating) {
+                    render();
+                }
+            }
+            twinkleRAF = requestAnimationFrame(throttledTick);
+        }
+        twinkleRAF = requestAnimationFrame(throttledTick);
+    }
+    startTwinkle();
+
+    // ========== 2-PLAYER TURN PASS ==========
+    const origSwitchTurn = switchTurn;
+    // Override switchTurn for 2P mode overlay (already handled by mode check in switchTurn calling scheduleAI)
+    // In 2P mode, just show a modal for device passing
+    const _origSwitchTurn = switchTurn;
+    switchTurn = function() {
+        gameState.currentPlayer = 1 - gameState.currentPlayer;
+        randomizeWind();
+        updateUI();
+        render();
+
+        if (gameState.mode === '1p' && gameState.currentPlayer === 1) {
+            scheduleAI();
+        } else if (gameState.mode === '2p') {
+            const nextName = gameState.playerNames[gameState.currentPlayer];
+            GameUtils.showModal('Pass the Device', `${nextName}'s turn!`, [
+                { text: 'Ready', primary: true }
+            ]);
+        }
+    };
+
+    // ========== INIT ==========
+    showSetup();
+    </script>
+</body>
+</html>
