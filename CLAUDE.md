@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 29 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 30 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
@@ -28,7 +28,8 @@ A collection of 29 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── qwirkle.html     # Tile-matching strategy game
     ├── numbermunchers.html # Math arcade with Troggles
     ├── wordsearch.html     # Word finding puzzle
-    └── artillery.html      # Gorillas-style artillery game
+    ├── artillery.html      # Gorillas-style artillery game
+    └── scrabble.html       # Classic word tile game
 ```
 
 ## Key Features
@@ -164,6 +165,19 @@ A collection of 29 classic games built with vanilla HTML, CSS, and JavaScript. D
 - AI difficulty: Easy (random), Medium (coarse search + noise), Hard (brute-force simulation, small noise)
 - Controls: +/- buttons, arrow keys, Space/Enter to fire
 - 2-player mode with device-passing modal
+
+### Scrabble
+- 15x15 board with standard premium squares (DL, TL, DW, TW)
+- 100-tile bag with standard letter distribution and point values
+- 7-tile rack per player; click to select, click board to place
+- Blank tiles: choose any letter (worth 0 points)
+- All formed words (main + cross-words) validated against built-in dictionary (~5000+ words)
+- Scoring: letter values × premium multipliers; 50-point bingo bonus for using all 7 tiles
+- Controls: Play (submit word), Recall (pick up tiles), Shuffle, Exchange (swap tiles, lose turn), Pass
+- AI difficulty: Easy (picks low-scoring words), Medium (top 50%), Hard (best available move)
+- Game ends when bag empty + player empties hand, or both players pass consecutively
+- End-game scoring: remaining rack tiles subtracted; player who went out gets opponent's remainder
+- 2-player mode with device-passing and hand hiding
 
 ## Development
 To test locally:

@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scrabble - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .scrabble-wrap { max-width: 860px; margin: 0 auto; }
+
+        /* ── Score Bar ── */
+        .score-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px; background: var(--card-bg); border-radius: 10px;
+            margin-bottom: 10px; flex-wrap: wrap; gap: 8px;
+        }
+        .score-bar .player-score {
+            display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.05rem;
+        }
+        .score-bar .player-score.active { color: var(--primary-color); }
+        .score-bar .player-score .pts { font-size: 1.3rem; }
+        .score-bar .bag-count {
+            color: var(--text-secondary); font-size: 0.9rem;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .score-bar .last-word { color: var(--warning-color); font-size: 0.85rem; font-style: italic; }
+
+        /* ── Board ── */
+        .board-scroll {
+            overflow: auto; -webkit-overflow-scrolling: touch;
+            border-radius: 10px; margin-bottom: 10px;
+            background: #1a5c2a; padding: 6px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,.35);
+        }
+        .scrabble-board {
+            display: grid; grid-template-columns: repeat(15, 1fr);
+            gap: 2px; min-width: 420px; width: 100%;
+            touch-action: manipulation;
+        }
+        .cell {
+            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            border-radius: 3px; cursor: pointer; position: relative;
+            font-size: clamp(0.5rem, 1.6vw, 0.72rem); font-weight: 700;
+            text-transform: uppercase; letter-spacing: .02em;
+            transition: box-shadow .15s;
+            user-select: none; -webkit-user-select: none;
+        }
+        .cell.normal  { background: #2e8b4a; color: rgba(255,255,255,.15); }
+        .cell.dl      { background: #6bb8d6; color: rgba(0,0,0,.35); }
+        .cell.tl      { background: #1a6ea0; color: rgba(255,255,255,.4); }
+        .cell.dw      { background: #e8917a; color: rgba(0,0,0,.3); }
+        .cell.tw      { background: #d63333; color: rgba(255,255,255,.45); }
+        .cell.center   { background: #e8917a; }
+        .cell.center::after {
+            content: '\u2605'; position: absolute; font-size: clamp(0.8rem, 2.4vw, 1.1rem);
+            color: rgba(0,0,0,.25); pointer-events: none;
+        }
+        .cell:hover:not(.has-tile) { box-shadow: inset 0 0 0 2px rgba(255,255,255,.45); }
+        .cell.target-highlight { box-shadow: inset 0 0 0 2px var(--warning-color); }
+
+        /* ── Tiles (board & rack) ── */
+        .tile {
+            width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(145deg, #f5e6c8, #dcc89e);
+            color: #3a2e1a; border-radius: 3px; font-weight: 800;
+            font-size: clamp(0.7rem, 2vw, 1rem);
+            box-shadow: 1px 1px 2px rgba(0,0,0,.35);
+            position: relative; cursor: pointer;
+            text-transform: uppercase; letter-spacing: .01em;
+        }
+        .tile .tile-pts {
+            position: absolute; bottom: 1px; right: 2px;
+            font-size: clamp(0.35rem, 1vw, 0.55rem); font-weight: 700; opacity: .7;
+        }
+        .tile.blank-tile { font-style: italic; opacity: .9; }
+        .tile.just-placed {
+            background: linear-gradient(145deg, #ffeaa7, #f0c36d);
+            box-shadow: 0 0 6px rgba(255, 200, 50, .6);
+        }
+        .tile.locked { cursor: default; }
+
+        /* ── Rack ── */
+        .rack-area {
+            background: var(--card-bg); border-radius: 10px; padding: 12px;
+            margin-bottom: 10px;
+        }
+        .rack-label {
+            font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;
+            text-align: center;
+        }
+        .rack {
+            display: flex; justify-content: center; gap: 6px;
+            min-height: 48px; flex-wrap: wrap;
+        }
+        .rack-tile {
+            width: clamp(38px, 9vw, 50px); height: clamp(38px, 9vw, 50px);
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(145deg, #f5e6c8, #dcc89e);
+            color: #3a2e1a; border-radius: 6px; font-weight: 800;
+            font-size: clamp(1rem, 3vw, 1.35rem);
+            box-shadow: 2px 2px 5px rgba(0,0,0,.4);
+            cursor: pointer; position: relative;
+            text-transform: uppercase; transition: transform .12s, box-shadow .12s;
+            user-select: none; -webkit-user-select: none;
+        }
+        .rack-tile:hover { transform: translateY(-3px); box-shadow: 2px 4px 8px rgba(0,0,0,.5); }
+        .rack-tile.selected {
+            transform: translateY(-6px); box-shadow: 0 0 12px rgba(99,102,241,.7);
+            outline: 2px solid var(--primary-color);
+        }
+        .rack-tile .tile-pts {
+            position: absolute; bottom: 2px; right: 4px;
+            font-size: clamp(0.5rem, 1.5vw, 0.65rem); font-weight: 700; opacity: .65;
+        }
+        .rack-tile.blank-tile { font-style: italic; }
+        .rack-tile.exchange-selected {
+            outline: 2px solid var(--danger-color);
+            box-shadow: 0 0 10px rgba(239,68,68,.5);
+        }
+
+        /* ── Action Buttons ── */
+        .action-bar {
+            display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .action-bar .btn { padding: 9px 18px; font-size: 0.9rem; min-width: 80px; }
+
+        /* ── Setup / Gameover Screens ── */
+        #setup-screen, #gameover-screen {
+            text-align: center; padding: 30px 10px;
+        }
+        .setup-options {
+            display: flex; flex-direction: column; align-items: center; gap: 16px;
+            margin: 24px 0;
+        }
+        .setup-options label { color: var(--text-secondary); margin-right: 8px; }
+        .setup-options select {
+            padding: 8px 14px; background: var(--dark-bg); color: var(--text-primary);
+            border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem;
+        }
+        .final-scores { margin: 20px 0; }
+        .final-scores .fs-row {
+            display: flex; justify-content: space-between; max-width: 280px;
+            margin: 8px auto; font-size: 1.1rem; padding: 6px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .final-scores .fs-row .fs-pts { font-weight: 700; color: var(--primary-color); }
+        .hidden { display: none !important; }
+
+        /* ── Blank modal ── */
+        .blank-picker {
+            display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px;
+            max-width: 340px; margin: 12px auto 0;
+        }
+        .blank-pick-btn {
+            padding: 8px 0; background: var(--dark-bg); color: var(--text-primary);
+            border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;
+            font-size: 1.05rem; font-weight: 700; text-transform: uppercase;
+            transition: background .15s;
+        }
+        .blank-pick-btn:hover { background: var(--primary-color); border-color: var(--primary-color); }
+
+        @media (max-width: 520px) {
+            .board-scroll { padding: 3px; }
+            .scrabble-board { gap: 1px; min-width: 330px; }
+            .action-bar .btn { padding: 7px 12px; font-size: 0.82rem; min-width: 60px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container scrabble-wrap">
+        <div class="game-header">
+            <h1>Scrabble</h1>
+            <a href="../index.html" class="back-btn">Menu</a>
+        </div>
+
+        <!-- Setup -->
+        <div id="setup-screen" class="game-container">
+            <h2>Scrabble</h2>
+            <p style="color:var(--text-secondary);margin-top:8px;">Place tiles to form words and outscore your opponent!</p>
+            <div class="setup-options">
+                <div>
+                    <label>Mode:</label>
+                    <select id="mode-select">
+                        <option value="1p">1 Player (vs Computer)</option>
+                        <option value="2p">2 Players</option>
+                    </select>
+                </div>
+                <div id="diff-row">
+                    <label>Difficulty:</label>
+                    <select id="diff-select">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-success" onclick="startGame()">Start Game</button>
+        </div>
+
+        <!-- Game -->
+        <div id="game-screen" class="hidden">
+            <div class="score-bar">
+                <div class="player-score" id="p1-display">
+                    <span id="p1-name">Player 1</span>
+                    <span class="pts" id="p1-score">0</span>
+                </div>
+                <div>
+                    <div class="bag-count">Bag: <span id="bag-count">100</span></div>
+                    <div class="last-word" id="last-word"></div>
+                </div>
+                <div class="player-score" id="p2-display">
+                    <span id="p2-name">Player 2</span>
+                    <span class="pts" id="p2-score">0</span>
+                </div>
+            </div>
+
+            <div class="board-scroll">
+                <div class="scrabble-board" id="board"></div>
+            </div>
+
+            <div class="rack-area">
+                <div class="rack-label" id="rack-label">Your Tiles</div>
+                <div class="rack" id="rack"></div>
+            </div>
+
+            <div class="action-bar" id="action-bar">
+                <button class="btn btn-success" id="btn-play" onclick="submitWord()">Play</button>
+                <button class="btn" id="btn-recall" onclick="recallTiles()">Recall</button>
+                <button class="btn btn-secondary" id="btn-shuffle" onclick="shuffleRack()">Shuffle</button>
+                <button class="btn btn-secondary" id="btn-exchange" onclick="startExchange()">Exchange</button>
+                <button class="btn btn-danger" id="btn-pass" onclick="passAction()">Pass</button>
+            </div>
+        </div>
+
+        <!-- Game Over -->
+        <div id="gameover-screen" class="game-container hidden">
+            <h2 id="go-title">Game Over</h2>
+            <div class="final-scores" id="final-scores"></div>
+            <div class="btn-group" style="margin-top:20px;">
+                <button class="btn btn-success" onclick="startGame()">Play Again</button>
+                <a href="../index.html" class="btn btn-secondary">Menu</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+    /* ════════════════════════════════════════════════════
+       SCRABBLE – full game logic
+       ════════════════════════════════════════════════════ */
+
+    // ── Tile Distribution ──
+    const TILE_DIST = {
+        A:[9,1],B:[2,3],C:[2,3],D:[4,2],E:[12,1],F:[2,4],G:[3,2],H:[2,4],
+        I:[9,1],J:[1,8],K:[1,5],L:[4,1],M:[2,3],N:[6,1],O:[8,1],P:[2,3],
+        Q:[1,10],R:[6,1],S:[4,1],T:[6,1],U:[4,1],V:[2,4],W:[2,4],X:[1,8],
+        Y:[2,4],Z:[1,10],'?':[2,0]
+    };
+    function letterValue(ch) {
+        if (!ch || ch === '?') return 0;
+        return (TILE_DIST[ch.toUpperCase()] || [0,0])[1];
+    }
+
+    // ── Board Premium Map ──
+    // 0=normal,1=DL,2=TL,3=DW,4=TW,5=center(DW)
+    const PREMIUM = (()=>{
+        const b = Array.from({length:15},()=>Array(15).fill(0));
+        const tw=[[0,0],[0,7],[0,14],[7,0],[7,14],[14,0],[14,7],[14,14]];
+        const dw=[[1,1],[2,2],[3,3],[4,4],[1,13],[2,12],[3,11],[4,10],
+                  [13,1],[12,2],[11,3],[10,4],[13,13],[12,12],[11,11],[10,10]];
+        const tl=[[1,5],[1,9],[5,1],[5,5],[5,9],[5,13],
+                  [9,1],[9,5],[9,9],[9,13],[13,5],[13,9]];
+        const dl=[[0,3],[0,11],[2,6],[2,8],[3,0],[3,7],[3,14],
+                  [6,2],[6,6],[6,8],[6,12],[7,3],[7,11],
+                  [8,2],[8,6],[8,8],[8,12],[11,0],[11,7],[11,14],
+                  [12,6],[12,8],[14,3],[14,11]];
+        tw.forEach(([r,c])=>b[r][c]=4);
+        dw.forEach(([r,c])=>b[r][c]=3);
+        tl.forEach(([r,c])=>b[r][c]=2);
+        dl.forEach(([r,c])=>b[r][c]=1);
+        b[7][7]=5;
+        return b;
+    })();
+    const PREMIUM_LABELS = ['','DL','TL','DW','TW',''];
+    const PREMIUM_CLASSES = ['normal','dl','tl','dw','tw','center'];
+
+    // ── Game State ──
+    let board = [];        // 15x15, null or {letter, value, locked, isBlank}
+    let bag = [];
+    let racks = [[],[]];   // racks[0]=p1, racks[1]=p2
+    let scores = [0,0];
+    let currentPlayer = 0; // 0 or 1
+    let placedThisTurn = []; // [{r,c}]
+    let selectedRackIdx = -1;
+    let gameMode = '1p';
+    let difficulty = 'medium';
+    let consecutivePasses = 0;
+    let gameOver = false;
+    let exchangeMode = false;
+    let exchangeSelected = new Set();
+    let lastWordText = '';
+    let p1Name = 'Player 1';
+    let p2Name = 'Player 2';
+    let firstMove = true;
+
+    // ── Dictionary ──
+    const WORDS = new Set();
+    function initDict() {
+        // Two-letter words (all valid Scrabble 2-letter words)
+        const tw = "aa ab ad ae ag ah ai al am an ar as at aw ax ay ba be bi bo by da de do ed ef eh el em en er es et ex fa fe go ha he hi hm ho id if in is it jo ka la li lo ma me mi mm mo mu my na ne no nu od oe of oh oi om on oo op or os ou ow ox oy pa pe pi po qi re sh si so ta ti to uh um un up us ut we wo xi xu ya ye yo za";
+        tw.split(' ').forEach(w=>WORDS.add(w));
+
+        // Common 3-8 letter words (curated for Scrabble playability)
+        const wds = `aah aal aas aba abo abs aby ace ach act add ado ads adz aff aft aga age ago ags aha ahi ahs aid ail aim ain air ais ait ala alb ale all alp als alt ama ami amp amu ana and ane ani ant any ape apo app apt arb arc are arf ark arm ars art ash ask asp ass ate att auk ava ave avo awa awe awl awn axe aye azo
+baa bad bag bah bam ban bap bar bas bat bay bed bee beg bel ben bes bet bey bib bid big bin bio bis bit biz boa bob bod bog boo bop bos bot bow box boy bra bro brr bub bud bug bum bun bur bus but buy cab cad cam can cap car cat caw cee chi cig cis cob cod cog col con coo cop cor cos cot cow cox coy coz cri cry cub cud cue cup cur cut cwm dab dad dag dah dak dal dam dap daw day deb dee del den dew dey dib did die dif dig dim din dip dis dit doc doe dog don dop dor dos dot dow dry dub dud due dug duh dui dun duo dup dye ear eat eau ebb ecu edh eds eel egg ego eke eld elf elk ell elm emu end eng eon era ere erg ern err eta eth eve ewe eye fab fad fan far fat fax fay fed fee fem fen fer fes fet feu few fey fez fib fid fie fig fin fir fit fix fiz fly fob foe fog foh fon foo fop for fou fox foy fro fry fub fud fug fun fur gab gad gae gag gal gam gap gar gas gat gay ged gee gel gem gen get gey ghi gib gid gie gig gin gip git gnu goa gob god goo gor gos got gox gul gum gun gup gus gut guv guy gym gyp had hae hag hah haj hap has hat haw hay heh hem hen hep her hes het hew hey hic hid hie him hin hip his hit hob hod hoe hog hop hot how hoy hub hue hug huh hum hun hup hut hyp ice ich ick icy ids iff ifs igg ilk ill imp ink inn ins ion ire irk ism its ivy jab jag jam jar jaw jay jee jet jib jig jin job joe jog jot joy jug jun jus jut kab kae kaf kas kat kay kea ked keg ken kep key khi kid kin kip kir kit koa kob koi kop kor kue lab lac lad lag lam lap lar las lat lav law lax lay lea led lee leg lei lek les let leu lev lex ley lib lid lie lim lin lip lis lit log loo lop lot low lox lug luv lye mac mad mae mag man map mar mas mat maw max may med meg mel mem men met mew mid mig mil mim mir mis mix moa mob mod mog mol mom mon moo mop mor mos mot mow mud mug mum mun mus mut nab nae nag nah nam nan nap naw nay neb nee net new nib nil nim nip nit nix nob nod nog nom noo nor nos not now nub nun nus nut oaf oak oar oat oba obe oca odd ode ods oes off oft ohm oho ohs oil oka oke old ole oms one ono ons ooh oot ope ops opt ora orb orc ore ors ort ose oud our out ova owe owl own oxo oxy pac pad pah pal pam pan pap par pas pat paw pax pay pea pec ped pee peg peh pen pep per pes pet pew phi pht pia pic pie pig pin pip pis pit piu pix ply pod poi pol pom poo pop pot pow pox pro pry pub pud pug pul pun pup pur pus put pya pye qat qis qua rad rag rah raj ram ran rap ras rat raw rax ray reb rec red ree ref reg rei rem rep res ret rev rex rho ria rib rid rif rig rim rin rip rob roc rod roe rom rot row rub rue rug rum run rut rya rye sab sac sad sae sag sal sap sat sau sav saw sax say sea sec see seg sei sel sen ser set sew sha she shh shy sib sic sim sin sip sir sis sit six ska ski sky sly sob sod sol som son sop sos sot sou sow sox soy spa spy sri sty sub sue sum sun sup suq syn tab tad tae tag taj tam tan tao tap tar tas tat tau tav taw tax tea ted tee ten the tho thy tic tie til tin tip tis tit tod toe tog tom ton too top tor tot tow toy try tsk tub tug tui tun tup tut tux twa two tye udo ugh uke ule ulu umm ump ums uni uns upo ups urb urd urn urp use uta ute uts vac van var vas vat vau vav vaw vee vet vex via vid vie vig vim vis voe vow vox vug wab wad wae wag wan wap war was wat waw wax way web wed wee wen wet wha who why wig win wis wit wiz woe wok won woo wop wos wot wow wry wud wye wyn xis yah yak yam yap yar yaw yay yea yeh yen yep yes yet yew yid yin yip yob yod yok yom yon you yow yup zag zap zas zax zed zee zen zep zig zin zip zit zoa zoo
+able ably ache acid acme acne acre acts adds aged ages agog aide aids aims airs airy ajar akin also anti ants arch area army arts asks atom aunt auto avid away axed axes axis babe baby back bade bags bail bait bake bald bale ball balm band bane bang bank bans bare bark barn bars base bash bass bath bats bays bead beak beam bean bear beat beds beef been beer bees bell belt bend bent berg best beta bets bias bids bike bile bill bind bird bite bits blah blew blob bloc blot blow blue blur boar boat bobs body bold bolt bomb bond bone book boom boot bore born boss both bout bowl boys brag bran brat bred brew brim brisk brit brow buck buds buff bugs bulk bull bump bums bunk burn burp bury bush bust busy buzz byte cabs cafe cage cake call calm came camp cane cape caps card care cart case cash cast cats cave cell cent char chat chef chew chin chip chop cite city clad clam clan clap claw clay clip clod clog clot club clue coal coat cock code coil coin cold colt coma comb come cone cook cool cope copy cord core cork corn cost cosy coup cove cozy crab crew crib crop crow cube cubs cues cult cups curb cure curl cute cyan dabs daft dale damp dams dare dark darn dart dash data date dawn days dead deaf deal dear deck deed deem deep deer dell demo dent deny desk dial dice died diet digs dime dine dire dirt disc dish disk dive dock does dole dome done doom door dose dots dove down doze drab drag draw drew drip drop drum drys dual dubs duck dude duel dues duet duke dull dumb dump dune dung dunk dusk dust duty each earl earn ears ease east easy eats echo edge edgy edit eels eggs eggo else emit ends epic euro even ever evil exam exit eyed eyes face fact fade fail fair fake fall fame fang fans fare farm fast fate fawn fear feat feed feel fees feet fell felt fend fern fest feud fief file fill film find fine fire firm fish fist fits five flag flat flaw flay flea fled flew flex flip flit flog flow flue flux foam foci foes foil fold folk fond font food fool foot ford fore fork form fort foul four fowl fray free frog from frown fuel full fume fund fury fuse fuss fuzz gain gait gale gall game gang gape gaps garb gash gasp gate gave gaze gear gems gene gets gift gild gill girl gist give glad glen glib glow glue glum glut gnaw goad goat goes gold golf gone good goof gore gory grab gray grew grid grim grin grip grit grow grub gulf gull gulp gums gunk gust guts guys gyre hack hail hair hale half hall halt hams hand hang hard hare hark harm harp hash haste hate haul have hawk haze hazy head heal heap hear heat heed heel held hell helm help hens herb herd here hero hers hewn hick hide high hike hill hilt hind hint hire hiss hits hive hoax hobs hock hoed hoes hold hole holy home hone hood hook hoop hope horn hose host hour howl hubs hued hues huge hulk hull hump hums hung hunk hunt hurl hurt hush husk hymn hype iced ides idle idol inch info inns into ions iota iris iron isle itch item jabs jack jade jail jams jars java jaws jazz jean jeer jerk jest jets jibe jigs jilt jobs jock jogs join joke jolt josh jots jowl joys judo jugs jump june junk jury just jute keen keep kegs kelp kept keys kick kids kill kind king kiss kite kits knack knead knee knew knit knob knot know lace lack lads lady laid lain lair lake lamb lame lamp land lane laps large lark lash lass last late laud lawn laws lazy lead leaf leak lean leap left lend lens less lest levy liar lice lick lied lien lies lieu life lift like limb lime limp line link lint lion lips list live load loaf loam loan lobe lock lode loft loge logo logs lone long look loom loop lore lorn lose loss lost lots loud love luck lull lump lung lure lurk lush lust lynx mace made mail main make male mall malt mane many maps mare mark mars mash mask mass mast mate math maze mead meal mean meat meek meet meld melt memo mend menu mere mesh mess mice mild mile milk mill mime mind mine mint mire miss mist mite moan moat mock mode moist mold mole molt monk mood moon moor moot more morn moss most moth move much muck muff mugs mule mull mumps mung murk muse mush musk must mute myth nabs nail name nape naps navy near neat neck need nest nets news newt next nice nick nine node none noon norm nose note noun nude null numb nuts obey odds odes ogle oils oink okay olds omen omit once ones only onto oops ooze opal open opts oral orca ores ouch ours oust outs oven over owed owes owls owns pace pack pact pads page paid pail pain pair pale pall palm pane pang pans pant papa pare park part pass past path pats pave pawn paws pays peak peal pear peas peat peck peel peer pelt pend pens perk perm pert pest pets pick pier pigs pike pile pill pine ping pink pins pint pipe piss pith pits city plan plat play plea plod plot plow ploy plug plum plus pock pods poem poet poke pole poll polo pomp pond pony pool poor pope pops pore pork port pose posh post pour pout pray prep prey prim prod prof prom prop prow prys pubs puck puff pugs pull pulp pump puns pure push puts putt pyre quad quay quid quiz race rack raft rage rags raid rail rain rake ramp rams rang rank rant raps rare rash rasp rate rave rays raze read real ream reap rear redo reed reef reek reel rein rely rend rent rest rice rich rick ride rift rigs rile rill rims rind ring rink riot ripe rise risk rite road roam roar robe robs rock rode role roll romp roof rook room root rope rose rosy rote rove rubs ruby rude rues ruff rugs ruin rule rump rums rune rung runs runt ruse rush rust sage sags said sail sake sale salt same sand sane sang sank sash save sawn says scab scam scan scar seed seek seem seen seep seer self sell semi send sent serf sets shed shim shin ship shod shoe shoo shop shot show shun shut sick side sift sigh sign silk sill silt sine sing sink sips sire site sits size skin skip slab slag slam slap slat slaw slay sled slew slid slim slit slob slog slop slot slow slug slum slur smog snap snag snip snob snot snow snub snug soak soap soar sock soda sofa soft soil sold sole solo some song soon soot sore sort soul soup sour span spar spas spec sped spin spit spot spry spud spur stab stag star stay stem step stew stir stop stow stub stud stun subs such suck sued suit sulk sump sums sung sunk suns sure surf swan swap swat swim swum sync tabs tack tact tads tags tail take tale talk tall tame tang tank tape taps tarn tart task taut taxi teak teal team tear teas tech teen tell temp tend tens tent term test text than that thaw them then they thin this thud thus tick tide tidy tied tier ties tile till tilt time tine tiny tips tire toad toes toil told toll tomb tome tone tons took tool tops tore torn tort toss tour town toys tram trap tray tree trek trim trio trip trod trot true tube tuck tug tuna tune turf turn tusk twin type ugly undo unit upon urge used user vain vale vamp vane vary vase vast vats veil vein vent verb very vest veto vice vied view vile vine visa void volt vote wade wadi wage wail wait wake walk wall wand wane ward warm warn warp wart wary wash wasp wave wavy waxy ways weak weal wean wear webs weds weed week weep weld well welt went were west wets what when whey whim whip whir whom wick wide wife wild will wilt wily wimp wind wine wing wink wipe wire wiry wise wish wisp with wits woke wolf womb wont wood woof wool word wore work worm worn wort wove wrap wren writ yack yaks yank yard yawn yawl year yell yelp yoga yoke yolk your yowl yurt zany zeal zero zest zing zone zoom
+about above abuse ached acids acorn acrid acted acute added adept admit adopt adult after again agent aging aglow agree ahead aided aimed aired aisle alarm album alert algae alien align alike alive allay alley allot allow alloy aloft alone along aloof alter amaze ample amuse angel anger angle angry ankle annex antic anvil apart apple apply arena argue arise armor aroma arose array aside asked asset atlas atone attic audio audit avail await awake award aware awful axial axion axles azure bacon badge badly bagel baker bales balls bands banjo banks baron based bases basic basin basis batch bathe baton beach beads beans beard beast began begin being below bench berry birth black blade blame bland blank blast blaze bleed blend bless blind bliss blitz block blond blood bloom blown blues bluff blunt board boast bonus boost booth bound boxer brace braid brain brake brand brass brave bread break breed brick bride brief bring brink brisk broad broke brood brook broom broth brown brush build built bulge bumps bunch burst buyer cabin cable candy cargo carry catch cause cedar chain chair chalk champ chaos charm chart chase cheap check cheer chess chest chief child chill china choir chord chose chunk churn claim clamp clash clasp class clean clear clerk cliff climb cling clock clone close cloth cloud clown clubs cluck clump clung coach coast color comma comet comic coral count couch could could count couple court cover crack craft cramp crane crash crate crave crawl crazy cream creek crest crime crisp cross crowd crown crush cubic curve cycle daily dance dated dealt death debug debut decal decay decor decoy delay delta dense depot depth derby devil diary dirty disco ditch dizzy dodge doing donor doubt dough draft drain drake drama drank drape drawn dread dream dress dried drift drill drink drive drone drool droop drops drove drown drunk dryer dully dumpy dunce dusty dwarf dying eager eagle early earth eased easel eaten eater eaves edges eight elbow elder elect elite ember empty ended enemy enjoy enter entry equal equip erase error essay event every exact exalt exile exist extra fable faced facet faith false famed fancy fatal fault fauna feast fiber field fifty fight final first fixed flame flash flask fleet flesh flies fling flint float flock flood floor flora floss flour flown fluid flush flute focal focus force forge forth forty forum found frame frank fraud freed fresh front froze fruit fully funds funny fuzzy gauge genre ghost given giver gland glare glass gleam glide globe gloom glory gloss glove gnome going grace grade grain grand grant grape grasp grass grave graze great greed green greet grief grill grind gripe groan groin groom grope gross group grove growl grown guard guess guest guide guild guilt guise gulch gulls gummy gusts gusty gutter habit handy happy harsh haste hasty haunt haven heart heavy hedge heist hello hence herbs hilly hinge hippy hitch hoist honey honor hoped horse hotel hound house human humid humor hurry hyena ideal image imply incur index indie inert infer inner input inter intro irony issue ivory jewel joint joker jolly joust judge juice jumbo jumpy kebab knife knobs knock knoll known label labor laden lance large laser latch later laugh layer leads learn lease least leave legal lemon level lever light limit linen liner links lions liver llama lobby local lodge logic looks loose lorry lover lower lucky lunar lunch lunge lurch magic major maker manor maple march marsh mason match mayor mealy media meets melon mercy merge merit metal meter midst might mince minor minus mirth mixed model modem moldy money month moral morph mossy motor motto mound mount mourn mouse mouth moved movie mural music nacho naive named nanny nerve never newly niece night noble noise north notch noted novel nurse occur ocean offer often olive onset opera orbit organ other outer outwit owner oxide ozone paint panel panic papal paper party paste patch pause peach pearl pedal penny perch peril petal petty phase phone photo piano piece pilot pinch pitch pixel pizza place plain plane plant plate plaza plead pluck plumb plume plump plunge plunk point polar pooch poser posit pouch pound power press price pride prime print prior prism prize probe prone proof prose proud prove prude prune psalm pulse punch pupil puppy purse queen query quest queue quick quiet quill quilt quirk quite quota quote radar radio rainy raise rally ranch range rapid ratio reach react ready realm rebel reign relax relay renal renew repay reply retro rider ridge rifle right rigid rinse risen risky rivet roast rocky rouge rough round route royal rugby ruler rumor rural rusty saint salad sales salon sandy sauce sauna scale scare scene scent scone scope score scout scram scrap screw scrub seize sense serve setup seven shade shaft shake shall shame shape share shark sharp shave shawl shear sheen sheer sheet shelf shell shift shine shiny shire shirt shock shore short shout shove shown shrub shrug sided siege sight sigma since sixth sixty sized skate skill skull slain slant slash slate sleek sleep slept slice slide sling slope sloth small smart smash smell smile smirk smoke snack snake snare sneak snore solar solid solve songs sorry south space spare spark spawn speak spear speed spell spend spent spice spill spine spoke spoon sport spray spree squad stack staff stage stain stair stake stale stalk stall stamp stand stare stark start state stays steak steal steam steel steep steer stern stick stiff still sting stink stint stock stoke stone stood stool store storm story stout stove strap straw stray strip strum strut stuck study stuff stump stung stunk style suite sugar sunny super surge sushi swamp swarm swear sweat sweep sweet swept swift swing swirl swirl swoop sword swore sworn swung syrup table taken taste taxes teach teeth tempo tenth theme there thick thief thigh thing think third thorn those three threw throb throw thump tidal tiger tight timer toast today token tonal topic total touch tough towel tower toxic trace track trade trail train trait trash tread treat trend trial tribe trick tried trims troop truce truck truly trump trunk trust truth tumor tuner tutor tweet twice twirl twist ultra uncle under unfit unify union unite unity until upper urban usher usual utter vague valid value valve vapor vault verge verse video vigor vinyl viola viral vital vivid vocal vodka voice voter wafer wagon waist waste watch water waver weary weave wedge weigh weird whale wheat wheel where which while whine whirl white whole whose width witch woman women worth would wound woven wrath wreck wring write wrong wrote yacht yield young youth zesty
+aboard absorb accept access across acting action active actual addled adjust admire advice advise afford agenda almost alumni always amount anchor animal annual answer anyway appear around arrest arrive artist aspect assert assign assist assume attach attack attend august author avenue babies bakery ballet banana banner barely barrel basics basket battle beacon beauty became become before behalf behave behind belong beside betray better beyond bishop biting bitter blanks blouse boiled border boring bother bounce bounty branch breath breeze bridge bright broken bronze brutal bubble bucket budget bundle burden bureau burger burner button bypass cached camera campus cancel candle canyon carbon career castle casual caught cement center cereal chance change charge cheese chosen church circle circus classy client closet clumsy clutch coarse coerce coffee coffin combat comedy coming commit common compel comply copper corner costly cotton course cousin create credit crisis critic cruise custom damage danger dealer debate decent decide decree deeply defeat defend define degree delete demand denial depart depend deploy deputy derive desert design desire detail detect devote dialog differ digest dinner direct divide divine domain double dozens dragon drawer dream driven driver drying during earthy eating editor effect effort empire enable endure energy engage engine enough ensure entire entity equity escape estate eternal evenly evolve exceed except excuse exempt expand expect expert export expose extend extent fabric facing factor fairly fallen family famine famous farmer father faucet faulty feared figure filing filter finale finger finish fiscal flavor flying folder follow forced forest forever forget formal format former fossil foster fourth freely french frozen fulfil fundry futile gained galaxy gamble garden garlic gather gender gentle gifted ginger global golden govern gravel ground growth grudge guitar gutter handle hangar happen harbor hardly hazard health helped hereby hidden highly hijack hockey holder hollow honest horror hosted humble hunger hybrid ignore immune impact impose impose income indeed indoor infant inform inject injury insect insert inside insist insure intact intend invent invest island issued jacket jerked jockey jostle jovial jumble jungle junior kettle kidney kindly knight ladder landed larger latest latter launch lawyer layout leader league legacy lender lesson letter lifted likely limits linear liquid listen litter little lively living looked lounge lovely lunged luxury maiden mainly makeup manage manner manual marble margin marine marker market master matter meadow medium memoir memory mental mentor merely merger method middle mighty mingle mirror mobile modern modest modify moment monkey mortal mosaic mostly mother motion motive moving murder museum mutual myriad namely napkin narrow nature nearby nearly neatly nicely nights nimble nobody nodded normal notice notion novice number object obtain occupy offend office offset onward opened oppose option orange orient orphan outfit outrun output oxygen packet paddle palace parade parent partly passed patrol patron paving pencil people period permit person phrase pillar pillow planet player please pledge plenty plunge pocket poetry police polish polite poorly poorly poster potent powder praise prayer prefer pretty prince prison prompt proper proven public pulled purple pursue puzzle rabbit racing raised ransom rarely rattle reader realty reason recall record reduce reform regard regime region reject relate relief remain remedy remote remove rental repair repeat report rescue resign resist resort result retain retire return reveal review reward rhythm ribbon riches riding ritual robust rocket roller rookie roster rotate rubber rubble ruling rumble runway rushed sacred salary salmon salute sample sanity saving scheme school scorch screen script scroll search season secret sector secure seeing select seller senate senior sequel series settle severe shadow shaken shared sharpen sheath shield shrink signal silent silver simple singer single sketch sleepy slight slower smooth soccer solely solemn source spiral spoken spread spring sprint squash square stable stance staple status steady stolen strain strand stream street stress strict strike string stripe stroke strong studio submit sudden suffer summit supply surely survey symbol syntax tackle tactic talent target temple tenant tender tennis terror thirty thorny though thread thrift thrive throne thrown ticket tighten timber tissue toward tragic trauma treaty tribal tricky trophy tunnel turtle twelve unfair unfold unhappy unique united upbeat update uphold urgent useful vacuum valley vanish varied vastly vendor verbal versus victim virtue vision visual volume waiter wander warmth wealth weapon weekly weight wisdom within wonder worker worthy writer yearly
+abandon ability absence academy achieve acquire address adjust advance adverse adviser affects airline airport already angular another anxiety anybody applied arrange assault attempt auction average awesome balance banking bargain barrier battery bearing becomes bedroom believe beneath benefit besides billion blanket bonuses breathe broadly brought cabinet caliber calling capable capital captain capture careful catalog caution ceiling central certain chamber channel chapter charity charter chronic circuit classic climate closest closing cluster coastal coating college combine command compact company compare compete complex compose concept concern conduct confess confirm connect consent consist contact contain content contest context control convert cooking correct council counter country coupled courage crucial crystal cuisine culture current curious cushion cutting dealing debated decline default defense deficit defined deliver density deposit derived deserve despite digital disable discard discuss disease dismiss display dispute distant diverse divided dollars donated dormant dynamic earning eastern economy edition elderly elegant element embrace emotion endless endless enforce engaged english enhance enjoyed essence evident examine example excited excited exclude execute exhaust exhibit expense expired explain explore exposed express extinct extreme factory faculty failing failure fashion feature federal fiction fighter finally finance finding fishing fitness flavour flexing flowing focused footage foreign forever formula fortune forward founded fragile freight fulfill funding further gallery gateway general genetic genuine gesture getting glimpse glowing gradual grandma greatly habitat halfway halfway halving handled harmful harvest heading healthy helpful herself highway himself history holding holiday hormone hostile housing however hundred hunting husband illegal imagine imaging imitate immense implied imported improve include incomes indexed indices induced inflict injured inquiry insight install instant instead interim invalid involve islands jointly journal journey justice justify justify keeping landing largely lasting leading learned leaving lending lengthy liberal license lighter limited located logging logical longest loyalty manager married massive matters meaning measure medical meeting members mention million mineral minimum missing mistake mixture mobility mixture monthly mounted mystery napkins natural nearest neither network neutral notable nothing noticed nuclear observe obvious offense officer ongoing opening opinion opinion opposed organic origins origins outdoor outlook outside overall overlap oversee painful parking partial partner passage passing patient pattern payment pending pension percent perfect perhaps persist picture pioneer plastic platter pleased plumage pointed polling popular portion poverty precise predict premier premium prepare present prevent primary printer privacy private problem proceed process produce product profile program project promise promote propose protect protest provide publish pulling pursuit pushing qualify quarter quickly radical rainbow raising reality receipt receive reduced reflect reforms regards release remains remarks removal renewal replace request require reserve resolve restore results revenue reverse routine running salvage salvage satisfy scandal scatter schools section segment selling senator serious service session settled several sharing shelter shortly showing silence similar skilled slammed slender smoking soaking somehow sorting sparked special specify sponsor squeeze stadium staffed staging stamped started station stealth storage strange stretch student studied subject subsidy suburbs succeed success suggest summary support supreme surface surplus survive suspect sustain symptom tactics teacher thought tobacco tonight tourism towards tracker trading traffic trouble trusted turning typical uniform unknown updated upgrade upscale utility varying venture version veteran victory village violent virtual visitor volcano volumes warrior weapons weather wedding weekend welcome welfare western whereas whistle wildly willing without witness working worried
+absolute abstract academic accepted accident accuracy accurate achieved addition adequate adjusted advanced advocate affected aircraft alliance analysis ancestor announce anything anything anywhere apparent appetite applying approach approval arrested assembly assuming attached bacteria balanced becoming believed birthday boarding boundary branches bringing brothers building bulletin business calendar campaign capacity captured casualty cautious ceremony chairman champion changing chapters chemical children choosing circular civilian claiming cleaning clearing climbing clothing coaching collapse colonial colonies combined comeback communal compared compiler compliant composed compound computer conclude concrete conflict congress constant consumer consumed contains continue contrast convince corridor counting covering creation criminal critical crossing cultural currency customer cylinder database daughter deadline dealings deciding declared declined decrease deducted defeated defended defining definite delicate delivery demanded departed deployed designer detailed detained detected dialogue directed directed discount discover discrete disorder dispatch distinct district dividend division doctrine document domestic dominant donation doubling doubting dramatic drinking dropping drunking duration dwelling dynamics earnings economic educated election elegance elevated eligible embedded emission employed employer empowered enabling encoding engaging engineer enormous enrolled entirely entrance envelope envelope equipped erection eruption escalate escaping estimate evaluate eventual everyday evidence evolving examined exceeded exchange exciting excluded exercise exerting existing expanded expected expedite expenses explicit explorer exponent exported exposure extended exterior external facility faithful familiar favorite featured feedback festival fighting figuring filename filtered finalist financed finished floating floating flooring focusing followed football forecast foremost formerly formerly formulas fortress forwards founding fraction fragment friendly frontier frontier frontier function gambling gathered generate generous genetics giveaway globally gorgeous governor graceful gradients graduate grateful greeting gripping guardian guidance hacking handling handbook handsome happened hardcore hardware harmful headline headline heritage heritage highland historic homepage homeless homework honestly horrible hospital humanity hydrogen identity ignorant illusion imagined imitated imminent immunity implicit imported imposing improved incident inclined included increase indirect industry informal inherent initiate innocent inspired instance integral intended interact interest internal interval intimate invented investor involved isolated judgment keyboard landlord landmark language latitude laughing launched lawmaker leverage lifetime lighting literacy literary literary location luckiest magazine magnetic magnetic maintain majority managing manifest marathon marriage massacre material maturity measured mechanic medieval membrane memorial merchant midnight militant military minimize minister minority minority minority moderate modified momentum monopoly mortgage mounting multiple multiple multiply mutation mutually national national navigate negative neighbor networks newcomer nineteen nitrogen nobleman normally normally northern numerous numerous objected obtained occasion occurred occurred offering official offshore offshore operator opponent opposite optional ordinary ordinary organize oriental oriented oriented original original outbreak overcome overlook override overseas painting parallel parallel parallel patients patented peaceful peaceful pedaling pendulum periodic periodic personal persuade petition pharmacy physical piloting pipeline planning planning platform playback pleasant pleasure plotting plotting pointing politics politics populace populist position positive possible possibly postcard powerful powerful practice practice precious premiere premises prepared presence preserve pressing pretends previous princess princess priority probable probable probably probably produced producer products profiles profound properly proposal proposal prospect proteins provider province publicly publicly punished pursuing pursuing pursuing quantity quantity quarters quarters quotient railroad railroad rational rational readable received recently recently recorder recorded recovery recovery recruits reducing reducing referral referral reflects reflects regional regional register register relating relating relation relation reliable relieved remained remained remember remember removing removing removing renaming repeated repeated replaced reported reported republic republic required required research research reserved reserved resident resident resigned resolved resolved resource resource response response restored restored retailer retailer retainer retainer returned returned revealed revealed rewarded rewarded rotating rotating salaries sandwich sandwich sandwich scenario scenario sciences sciences seasonal seasonal security security selected selected semester semester sequence sequence sergeant sergeant severely severely shielded shipping shipping shoulder shoulder shutdown shutdown siblings sideways sideways signaled signaled silently silently skeleton skeleton sleeping sleeping slightly slightly slipping slipping smallest smallest snapshot snapshot software software soldiers soldiers somewhat somewhat southern southern spacious spacious speaking speaking spelling spending spinning spinning sporting spotting spurring squadron stacking standard standing standard standout standing standing starting starting sticking sticking stimulus stimulus stopping stopping straight straight strategy strategy strength strength striking striking strongly strongly struggle struggle stunning stunning suburban suburban suddenly suddenly suffered suffered suggests suggests suitable suitable superior superior supplied supplied supposed supposed suppress suppress surgical surgical surprise surprise surgical surgical survival survival suspects suspects swimming swimming switched switched symbolic symbolic talented tangible teaching teammate template tendency terminal terrific textbook theology thirteen thorough thousand thriving throwing together tomorrow tomorrow tortured tortured touching touching tracking tracking training training transfer transfer trillion trillion troubled troubled trucking trucking trusting trusting tumbling umbrella umbrella uncommon uncommon underdog underdog underway underway universe universe unlikely unlikely unlocked unlocked unmarked unrelated unsealed unsigned unsigned untitled unveiled unveiled unwanted upcoming upcoming updating updating upheaval upstairs validate valuable vanished variable vertical veterans veterans violence violence virtuous virtuous volatile volatile volumes warranty warranty watchdog watchdog weakness weakness wealthier welcomed welcomed whatever whenever wherever whispers wildlife windmill wireless wireless withdraw withdraw woodland woodland workshop workshop`;
+        wds.split(/\s+/).forEach(w => { if (w.length >= 2) WORDS.add(w.toLowerCase()); });
+    }
+    initDict();
+
+    function isValidWord(w) { return w.length >= 2 && WORDS.has(w.toLowerCase()); }
+
+    // ── Build bag ──
+    function createBag() {
+        const b = [];
+        for (const [letter, [count, value]] of Object.entries(TILE_DIST)) {
+            for (let i = 0; i < count; i++) b.push({ letter, value, isBlank: letter === '?' });
+        }
+        // Fisher-Yates shuffle
+        for (let i = b.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [b[i], b[j]] = [b[j], b[i]];
+        }
+        return b;
+    }
+
+    function drawTiles(rack, count) {
+        while (rack.length < 7 && count > 0 && bag.length > 0) {
+            rack.push(bag.pop());
+            count--;
+        }
+    }
+
+    // ── Board helpers ──
+    function cellAt(r, c) { return (r >= 0 && r < 15 && c >= 0 && c < 15) ? board[r][c] : null; }
+
+    function getFormedWords() {
+        if (placedThisTurn.length === 0) return null;
+
+        // Determine direction
+        const rows = new Set(placedThisTurn.map(p => p.r));
+        const cols = new Set(placedThisTurn.map(p => p.c));
+        let horizontal = true;
+        if (rows.size > 1 && cols.size > 1) return null; // not in line
+        if (rows.size > 1) horizontal = false;
+
+        // Check placed tiles are in a contiguous line with existing tiles
+        if (horizontal) {
+            const row = placedThisTurn[0].r;
+            const minC = Math.min(...placedThisTurn.map(p => p.c));
+            const maxC = Math.max(...placedThisTurn.map(p => p.c));
+            for (let c = minC; c <= maxC; c++) {
+                if (!board[row][c]) return null; // gap
+            }
+        } else {
+            const col = placedThisTurn[0].c;
+            const minR = Math.min(...placedThisTurn.map(p => p.r));
+            const maxR = Math.max(...placedThisTurn.map(p => p.r));
+            for (let r = minR; r <= maxR; r++) {
+                if (!board[r][col]) return null; // gap
+            }
+        }
+
+        // First move must cover center
+        if (firstMove) {
+            const coversCenter = placedThisTurn.some(p => p.r === 7 && p.c === 7);
+            if (!coversCenter) return null;
+            if (placedThisTurn.length < 2) return null; // need at least 2 letters first turn
+        } else {
+            // Must be adjacent to at least one existing tile
+            let touchesExisting = false;
+            for (const {r, c} of placedThisTurn) {
+                const neighbors = [[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
+                for (const [nr, nc] of neighbors) {
+                    const cell = cellAt(nr, nc);
+                    if (cell && cell.locked) { touchesExisting = true; break; }
+                }
+                if (touchesExisting) break;
+            }
+            if (!touchesExisting) return null;
+        }
+
+        const words = [];
+        const placedSet = new Set(placedThisTurn.map(p => `${p.r},${p.c}`));
+
+        // Get main word
+        function getWord(r, c, dr, dc) {
+            // Find start
+            let sr = r, sc = c;
+            while (cellAt(sr - dr, sc - dc)) { sr -= dr; sc -= dc; }
+            let word = '', tiles = [], hasNew = false;
+            let wr = sr, wc = sc;
+            while (cellAt(wr, wc)) {
+                const cell = board[wr][wc];
+                word += cell.letter.toLowerCase();
+                tiles.push({ r: wr, c: wc, cell });
+                if (placedSet.has(`${wr},${wc}`)) hasNew = true;
+                wr += dr; wc += dc;
+            }
+            if (word.length >= 2 && hasNew) return { word, tiles };
+            return null;
+        }
+
+        // Main word along placement direction
+        const {r, c} = placedThisTurn[0];
+        const mainWord = horizontal ? getWord(r, c, 0, 1) : getWord(r, c, 1, 0);
+        if (mainWord) words.push(mainWord);
+
+        // Cross words
+        for (const {r: pr, c: pc} of placedThisTurn) {
+            const crossWord = horizontal ? getWord(pr, pc, 1, 0) : getWord(pr, pc, 0, 1);
+            if (crossWord) words.push(crossWord);
+        }
+
+        // Single tile on first move check already handled
+        if (words.length === 0) return null;
+        return words;
+    }
+
+    function scoreWords(words) {
+        let total = 0;
+        const placedSet = new Set(placedThisTurn.map(p => `${p.r},${p.c}`));
+        for (const {tiles} of words) {
+            let wordScore = 0, wordMult = 1;
+            for (const {r, c, cell} of tiles) {
+                let tileScore = cell.value;
+                if (placedSet.has(`${r},${c}`)) {
+                    const prem = PREMIUM[r][c];
+                    if (prem === 1) tileScore *= 2;       // DL
+                    else if (prem === 2) tileScore *= 3;  // TL
+                    else if (prem === 3 || prem === 5) wordMult *= 2; // DW
+                    else if (prem === 4) wordMult *= 3;   // TW
+                }
+                wordScore += tileScore;
+            }
+            total += wordScore * wordMult;
+        }
+        // Bingo bonus
+        if (placedThisTurn.length === 7) total += 50;
+        return total;
+    }
+
+    // ── Rendering ──
+    function renderBoard() {
+        const el = document.getElementById('board');
+        el.innerHTML = '';
+        for (let r = 0; r < 15; r++) {
+            for (let c = 0; c < 15; c++) {
+                const div = document.createElement('div');
+                const prem = PREMIUM[r][c];
+                div.className = 'cell ' + PREMIUM_CLASSES[prem];
+                div.dataset.r = r;
+                div.dataset.c = c;
+
+                if (board[r][c]) {
+                    const t = board[r][c];
+                    const tileDiv = document.createElement('div');
+                    tileDiv.className = 'tile' + (t.locked ? ' locked' : ' just-placed') + (t.isBlank ? ' blank-tile' : '');
+                    tileDiv.textContent = t.letter;
+                    if (t.value > 0) {
+                        const pts = document.createElement('span');
+                        pts.className = 'tile-pts';
+                        pts.textContent = t.value;
+                        tileDiv.appendChild(pts);
+                    }
+                    div.appendChild(tileDiv);
+                    div.classList.add('has-tile');
+                    if (!t.locked) {
+                        tileDiv.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            pickUpTile(r, c);
+                        });
+                    }
+                } else {
+                    // Show premium label
+                    if (prem > 0 && prem < 5) div.textContent = PREMIUM_LABELS[prem];
+                    div.addEventListener('click', () => placeTile(r, c));
+                }
+                el.appendChild(div);
+            }
+        }
+    }
+
+    function renderRack() {
+        const el = document.getElementById('rack');
+        const rack = racks[currentPlayer];
+        el.innerHTML = '';
+        rack.forEach((t, i) => {
+            const div = document.createElement('div');
+            div.className = 'rack-tile' + (i === selectedRackIdx ? ' selected' : '') + (t.isBlank ? ' blank-tile' : '');
+            if (exchangeMode && exchangeSelected.has(i)) div.classList.add('exchange-selected');
+            div.textContent = t.isBlank ? (t.assignedLetter || '?') : t.letter;
+            if (t.value > 0) {
+                const pts = document.createElement('span');
+                pts.className = 'tile-pts';
+                pts.textContent = t.value;
+                div.appendChild(pts);
+            }
+            div.addEventListener('click', () => {
+                if (exchangeMode) {
+                    if (exchangeSelected.has(i)) exchangeSelected.delete(i);
+                    else exchangeSelected.add(i);
+                    renderRack();
+                } else {
+                    selectedRackIdx = (selectedRackIdx === i) ? -1 : i;
+                    renderRack();
+                }
+            });
+            el.appendChild(div);
+        });
+    }
+
+    function renderScores() {
+        document.getElementById('p1-name').textContent = p1Name;
+        document.getElementById('p2-name').textContent = p2Name;
+        document.getElementById('p1-score').textContent = scores[0];
+        document.getElementById('p2-score').textContent = scores[1];
+        document.getElementById('bag-count').textContent = bag.length;
+        document.getElementById('last-word').textContent = lastWordText;
+
+        document.getElementById('p1-display').classList.toggle('active', currentPlayer === 0);
+        document.getElementById('p2-display').classList.toggle('active', currentPlayer === 1);
+
+        const isAI = gameMode === '1p' && currentPlayer === 1;
+        document.getElementById('rack-label').textContent = isAI ? 'Computer is thinking...' :
+            (gameMode === '2p' ? `${currentPlayer === 0 ? p1Name : p2Name}'s Tiles` : 'Your Tiles');
+    }
+
+    function setActionButtons(enabled) {
+        document.querySelectorAll('#action-bar .btn').forEach(b => b.disabled = !enabled);
+    }
+
+    // ── Tile placement ──
+    function placeTile(r, c) {
+        if (gameOver || exchangeMode) return;
+        if (board[r][c]) return;
+        if (selectedRackIdx < 0) return;
+        const rack = racks[currentPlayer];
+        const tile = rack[selectedRackIdx];
+
+        if (tile.isBlank && !tile.assignedLetter) {
+            // Show letter picker
+            showBlankPicker(r, c);
+            return;
+        }
+
+        board[r][c] = {
+            letter: tile.isBlank ? tile.assignedLetter : tile.letter,
+            value: tile.value,
+            locked: false,
+            isBlank: tile.isBlank,
+            rackTile: tile
+        };
+        rack.splice(selectedRackIdx, 1);
+        placedThisTurn.push({ r, c });
+        selectedRackIdx = -1;
+        renderBoard();
+        renderRack();
+        renderScores();
+    }
+
+    function pickUpTile(r, c) {
+        if (gameOver || exchangeMode) return;
+        const cell = board[r][c];
+        if (!cell || cell.locked) return;
+        const rack = racks[currentPlayer];
+        const original = cell.rackTile || { letter: cell.isBlank ? '?' : cell.letter, value: cell.value, isBlank: cell.isBlank };
+        if (original.isBlank) { original.assignedLetter = null; }
+        rack.push(original);
+        board[r][c] = null;
+        placedThisTurn = placedThisTurn.filter(p => !(p.r === r && p.c === c));
+        selectedRackIdx = -1;
+        renderBoard();
+        renderRack();
+    }
+
+    function recallTiles() {
+        if (gameOver || exchangeMode) return;
+        const toRecall = [...placedThisTurn];
+        for (const {r, c} of toRecall) pickUpTile(r, c);
+    }
+
+    function shuffleRack() {
+        if (gameOver || exchangeMode) return;
+        const rack = racks[currentPlayer];
+        for (let i = rack.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [rack[i], rack[j]] = [rack[j], rack[i]];
+        }
+        selectedRackIdx = -1;
+        renderRack();
+    }
+
+    function showBlankPicker(r, c) {
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        let html = '<div class="blank-picker">';
+        letters.forEach(l => {
+            html += `<button class="blank-pick-btn" onclick="pickBlankLetter('${l}',${r},${c})">${l}</button>`;
+        });
+        html += '</div>';
+        GameUtils.showModal('Choose a Letter', html, [
+            { text: 'Cancel', action: () => { selectedRackIdx = -1; renderRack(); } }
+        ]);
+    }
+
+    window.pickBlankLetter = function(letter, r, c) {
+        // Close modal
+        const overlay = document.querySelector('.modal-overlay');
+        if (overlay) overlay.remove();
+
+        const rack = racks[currentPlayer];
+        const tile = rack[selectedRackIdx];
+        tile.assignedLetter = letter;
+
+        board[r][c] = {
+            letter: letter,
+            value: 0,
+            locked: false,
+            isBlank: true,
+            rackTile: tile
+        };
+        rack.splice(selectedRackIdx, 1);
+        placedThisTurn.push({ r, c });
+        selectedRackIdx = -1;
+        renderBoard();
+        renderRack();
+        renderScores();
+    };
+
+    // ── Submit word ──
+    function submitWord() {
+        if (gameOver || exchangeMode) return;
+        if (placedThisTurn.length === 0) {
+            GameUtils.showModal('No Tiles', 'Place some tiles on the board first.', [{ text: 'OK', primary: true }]);
+            return;
+        }
+
+        const words = getFormedWords();
+        if (!words) {
+            GameUtils.showModal('Invalid Placement', 'Tiles must be in a single row or column, with no gaps, and must connect to existing tiles.', [{ text: 'OK', primary: true }]);
+            return;
+        }
+
+        // Validate all words
+        const invalid = words.filter(w => !isValidWord(w.word));
+        if (invalid.length > 0) {
+            const badWords = invalid.map(w => w.word.toUpperCase()).join(', ');
+            GameUtils.showModal('Invalid Word' + (invalid.length > 1 ? 's' : ''),
+                `Not in dictionary: ${badWords}`, [{ text: 'OK', primary: true }]);
+            return;
+        }
+
+        const pts = scoreWords(words);
+        scores[currentPlayer] += pts;
+        lastWordText = words.map(w => w.word.toUpperCase()).join(', ') + ` (+${pts})`;
+
+        // Lock tiles
+        for (const {r, c} of placedThisTurn) {
+            board[r][c].locked = true;
+        }
+        firstMove = false;
+        placedThisTurn = [];
+        consecutivePasses = 0;
+
+        // Draw tiles
+        drawTiles(racks[currentPlayer], 7);
+
+        // Check end
+        if (checkEnd()) return;
+
+        // Switch player
+        switchPlayer();
+    }
+
+    function passAction() {
+        if (gameOver || exchangeMode) return;
+        if (placedThisTurn.length > 0) recallTiles();
+        consecutivePasses++;
+        lastWordText = `${currentPlayer === 0 ? p1Name : p2Name} passed`;
+        if (consecutivePasses >= 2) { endGame(); return; }
+        switchPlayer();
+    }
+
+    function startExchange() {
+        if (gameOver) return;
+        if (bag.length === 0) {
+            GameUtils.showModal('Empty Bag', 'No tiles left to exchange.', [{ text: 'OK', primary: true }]);
+            return;
+        }
+        if (placedThisTurn.length > 0) recallTiles();
+        if (exchangeMode) {
+            // Confirm exchange
+            if (exchangeSelected.size === 0) {
+                exchangeMode = false;
+                renderRack();
+                document.getElementById('btn-exchange').textContent = 'Exchange';
+                return;
+            }
+            const rack = racks[currentPlayer];
+            const toExchange = [...exchangeSelected].sort((a,b) => b-a);
+            const removed = [];
+            toExchange.forEach(i => removed.push(...rack.splice(i, 1)));
+            drawTiles(rack, 7);
+            // Put removed tiles back in bag and shuffle
+            removed.forEach(t => { if (t.isBlank) t.assignedLetter = null; bag.push(t); });
+            for (let i = bag.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [bag[i], bag[j]] = [bag[j], bag[i]];
+            }
+            exchangeMode = false;
+            exchangeSelected.clear();
+            document.getElementById('btn-exchange').textContent = 'Exchange';
+            consecutivePasses = 0;
+            lastWordText = `${currentPlayer === 0 ? p1Name : p2Name} exchanged ${removed.length} tile${removed.length > 1 ? 's' : ''}`;
+            switchPlayer();
+        } else {
+            exchangeMode = true;
+            exchangeSelected.clear();
+            document.getElementById('btn-exchange').textContent = 'Confirm';
+            renderRack();
+        }
+    }
+
+    function switchPlayer() {
+        selectedRackIdx = -1;
+        exchangeMode = false;
+        exchangeSelected.clear();
+        document.getElementById('btn-exchange').textContent = 'Exchange';
+        currentPlayer = 1 - currentPlayer;
+        renderBoard();
+        renderRack();
+        renderScores();
+
+        if (gameMode === '1p' && currentPlayer === 1) {
+            setActionButtons(false);
+            setTimeout(() => aiMove(), 600);
+        } else if (gameMode === '2p') {
+            // Hide hand, show pass-device modal
+            document.getElementById('rack').innerHTML = '';
+            const nextName = currentPlayer === 0 ? p1Name : p2Name;
+            GameUtils.showModal(`${nextName}'s Turn`, `Pass the device to ${nextName}.`, [
+                { text: 'Ready', primary: true, action: () => { renderRack(); } }
+            ]);
+        }
+    }
+
+    function checkEnd() {
+        const rack = racks[currentPlayer];
+        if (rack.length === 0 && bag.length === 0) {
+            endGame();
+            return true;
+        }
+        return false;
+    }
+
+    function endGame() {
+        gameOver = true;
+        // Subtract remaining tiles; winner who went out gets opponent's total
+        let wentOut = -1;
+        for (let p = 0; p < 2; p++) {
+            if (racks[p].length === 0) wentOut = p;
+        }
+        for (let p = 0; p < 2; p++) {
+            let penalty = 0;
+            racks[p].forEach(t => penalty += t.value);
+            scores[p] -= penalty;
+            if (wentOut >= 0 && wentOut !== p) scores[wentOut] += penalty;
+        }
+
+        // Show game over
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('gameover-screen').classList.remove('hidden');
+
+        let result;
+        if (scores[0] > scores[1]) {
+            document.getElementById('go-title').textContent = `${p1Name} Wins!`;
+            result = gameMode === '1p' ? 'win' : 'win';
+        } else if (scores[1] > scores[0]) {
+            document.getElementById('go-title').textContent = `${p2Name} Wins!`;
+            result = gameMode === '1p' ? 'loss' : 'win';
+        } else {
+            document.getElementById('go-title').textContent = "It's a Tie!";
+            result = 'draw';
+        }
+
+        document.getElementById('final-scores').innerHTML = `
+            <div class="fs-row"><span>${p1Name}</span><span class="fs-pts">${scores[0]}</span></div>
+            <div class="fs-row"><span>${p2Name}</span><span class="fs-pts">${scores[1]}</span></div>
+        `;
+
+        GameUtils.stats.update('scrabble', result);
+        const winnerScore = Math.max(scores[0], scores[1]);
+        const winnerName = scores[0] >= scores[1] ? p1Name : p2Name;
+        GameUtils.highScores.add('scrabble', winnerName, winnerScore);
+    }
+
+    // ── AI ──
+    function aiMove() {
+        if (gameOver) return;
+        const rack = racks[1];
+        const moves = findAIMoves(rack);
+
+        if (moves.length === 0) {
+            // Exchange or pass
+            if (bag.length >= 7) {
+                // Exchange worst tiles
+                const sorted = [...rack].sort((a,b) => b.value - a.value);
+                const numExchange = Math.min(3, rack.length);
+                const removed = rack.splice(0, numExchange);
+                drawTiles(rack, 7);
+                removed.forEach(t => { if (t.isBlank) t.assignedLetter = null; bag.push(t); });
+                for (let i = bag.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [bag[i], bag[j]] = [bag[j], bag[i]];
+                }
+                lastWordText = `${p2Name} exchanged tiles`;
+                consecutivePasses = 0;
+            } else {
+                consecutivePasses++;
+                lastWordText = `${p2Name} passed`;
+                if (consecutivePasses >= 2) { endGame(); return; }
+            }
+            switchPlayer();
+            setActionButtons(true);
+            return;
+        }
+
+        // Pick a move based on difficulty
+        let move;
+        if (difficulty === 'easy') {
+            // Pick from bottom 30% of moves
+            moves.sort((a,b) => a.score - b.score);
+            const cutoff = Math.max(1, Math.floor(moves.length * 0.3));
+            move = moves[Math.floor(Math.random() * cutoff)];
+        } else if (difficulty === 'medium') {
+            // Pick from top 50%
+            moves.sort((a,b) => b.score - a.score);
+            const cutoff = Math.max(1, Math.floor(moves.length * 0.5));
+            move = moves[Math.floor(Math.random() * cutoff)];
+        } else {
+            // Hard: pick the best
+            moves.sort((a,b) => b.score - a.score);
+            move = moves[0];
+        }
+
+        // Execute move
+        const usedIndices = [];
+        for (const {r, c, letter, isBlank} of move.tiles) {
+            // Find tile in rack
+            let idx = -1;
+            for (let i = 0; i < rack.length; i++) {
+                if (usedIndices.includes(i)) continue;
+                if (isBlank && rack[i].isBlank) { idx = i; break; }
+                if (!isBlank && !rack[i].isBlank && rack[i].letter === letter) { idx = i; break; }
+            }
+            if (idx < 0) continue;
+            usedIndices.push(idx);
+            board[r][c] = { letter, value: isBlank ? 0 : letterValue(letter), locked: false, isBlank };
+            placedThisTurn.push({ r, c });
+        }
+        // Remove used tiles from rack (in reverse order)
+        usedIndices.sort((a,b) => b-a);
+        usedIndices.forEach(i => rack.splice(i, 1));
+
+        // Score
+        const words = getFormedWords();
+        if (words) {
+            const pts = scoreWords(words);
+            scores[1] += pts;
+            lastWordText = words.map(w => w.word.toUpperCase()).join(', ') + ` (+${pts})`;
+            for (const {r, c} of placedThisTurn) board[r][c].locked = true;
+            firstMove = false;
+        }
+        placedThisTurn = [];
+        consecutivePasses = 0;
+        drawTiles(rack, 7);
+
+        if (checkEnd()) return;
+        switchPlayer();
+        setActionButtons(true);
+    }
+
+    function findAIMoves(rack) {
+        const moves = [];
+        const rackLetters = rack.map(t => t.isBlank ? '?' : t.letter);
+
+        if (firstMove) {
+            // Try horizontal words through center
+            findWordsAtAnchor(7, 7, true, rackLetters, moves);
+            return moves;
+        }
+
+        // Find anchor squares (empty squares adjacent to filled squares)
+        const anchors = [];
+        for (let r = 0; r < 15; r++) {
+            for (let c = 0; c < 15; c++) {
+                if (board[r][c]) continue;
+                const neighbors = [[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
+                for (const [nr, nc] of neighbors) {
+                    if (cellAt(nr, nc) && cellAt(nr, nc).locked) {
+                        anchors.push([r, c]);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Limit search for performance
+        const maxAnchors = difficulty === 'hard' ? anchors.length : Math.min(anchors.length, 40);
+        const selectedAnchors = anchors.slice(0, maxAnchors);
+
+        for (const [ar, ac] of selectedAnchors) {
+            findWordsAtAnchor(ar, ac, true, rackLetters, moves);
+            findWordsAtAnchor(ar, ac, false, rackLetters, moves);
+        }
+
+        return moves;
+    }
+
+    function findWordsAtAnchor(ar, ac, horizontal, rackLetters, moves) {
+        const dr = horizontal ? 0 : 1;
+        const dc = horizontal ? 1 : 0;
+
+        // Try placing words that pass through this anchor
+        // Look back to see how far we can extend
+        let maxBack = 0;
+        let tr = ar - dr, tc = ac - dc;
+        while (tr >= 0 && tc >= 0 && !board[tr][tc]) {
+            maxBack++;
+            tr -= dr; tc -= dc;
+        }
+        maxBack = Math.min(maxBack, rackLetters.length - 1);
+
+        for (let back = 0; back <= maxBack; back++) {
+            const startR = ar - back * dr;
+            const startC = ac - back * dc;
+            tryBuildWord(startR, startC, dr, dc, rackLetters.slice(), [], back, moves);
+        }
+    }
+
+    function tryBuildWord(sr, sc, dr, dc, availLetters, placed, minLen, moves) {
+        let r = sr, c = sc;
+        let word = '';
+        let tilesUsed = [];
+        let rackUsed = [];
+        let available = [...availLetters];
+
+        // Build word going forward
+        for (let steps = 0; steps < 15; steps++) {
+            if (r < 0 || r >= 15 || c < 0 || c >= 15) break;
+
+            if (board[r][c] && board[r][c].locked) {
+                word += board[r][c].letter.toLowerCase();
+            } else {
+                // Try each available letter
+                if (available.length === 0) break;
+
+                // Check cross-word constraint
+                const validLetters = getCrossConstraint(r, c, dr, dc);
+
+                let foundLetter = false;
+                for (let i = 0; i < available.length; i++) {
+                    const letter = available[i];
+                    const candidates = letter === '?' ? 'abcdefghijklmnopqrstuvwxyz'.split('') : [letter.toLowerCase()];
+
+                    for (const tryLetter of candidates) {
+                        if (validLetters && !validLetters.has(tryLetter)) continue;
+
+                        const newWord = word + tryLetter;
+                        // Check if this prefix could lead to a valid word
+                        let hasPrefix = false;
+                        for (const w of WORDS) {
+                            if (w.startsWith(newWord)) { hasPrefix = true; break; }
+                        }
+                        if (!hasPrefix && !isValidWord(newWord)) continue;
+
+                        // Try this letter
+                        const newAvail = [...available];
+                        newAvail.splice(i, 1);
+                        const newTiles = [...tilesUsed, { r, c, letter: tryLetter.toUpperCase(), isBlank: letter === '?' }];
+
+                        if (newTiles.length >= 1 && newWord.length >= 2 && isValidWord(newWord)) {
+                            // Temporarily place to score
+                            const tempPlaced = [];
+                            for (const t of newTiles) {
+                                board[t.r][t.c] = { letter: t.letter, value: t.isBlank ? 0 : letterValue(t.letter), locked: false, isBlank: t.isBlank };
+                                tempPlaced.push({ r: t.r, c: t.c });
+                            }
+                            placedThisTurn = tempPlaced;
+                            const formedWords = getFormedWords();
+                            let valid = true;
+                            let score = 0;
+                            if (formedWords) {
+                                for (const fw of formedWords) {
+                                    if (!isValidWord(fw.word)) { valid = false; break; }
+                                }
+                                if (valid) score = scoreWords(formedWords);
+                            } else {
+                                valid = false;
+                            }
+                            // Undo
+                            for (const t of newTiles) board[t.r][t.c] = null;
+                            placedThisTurn = [];
+
+                            if (valid && score > 0) {
+                                moves.push({ tiles: newTiles, score, word: newWord });
+                            }
+                        }
+
+                        // Continue building longer words (recurse simply by continuing the loop)
+                        if (hasPrefix && newTiles.length < 7) {
+                            tryBuildWordContinue(r + dr, c + dc, dr, dc, newAvail, newTiles, newWord, moves);
+                        }
+
+                        foundLetter = true;
+                        break; // Only try first valid option per rack tile for performance
+                    }
+                    if (foundLetter) break;
+                }
+                break; // Only extend one rack tile at this position
+            }
+            r += dr;
+            c += dc;
+        }
+    }
+
+    function tryBuildWordContinue(r, c, dr, dc, available, tilesUsed, word, moves) {
+        if (r < 0 || r >= 15 || c < 0 || c >= 15) return;
+        if (moves.length > 200) return; // Limit for performance
+
+        if (board[r][c] && board[r][c].locked) {
+            const newWord = word + board[r][c].letter.toLowerCase();
+            if (isValidWord(newWord)) {
+                // Score this
+                const tempPlaced = [];
+                for (const t of tilesUsed) {
+                    board[t.r][t.c] = { letter: t.letter, value: t.isBlank ? 0 : letterValue(t.letter), locked: false, isBlank: t.isBlank };
+                    tempPlaced.push({ r: t.r, c: t.c });
+                }
+                placedThisTurn = tempPlaced;
+                const formedWords = getFormedWords();
+                let valid = true, score = 0;
+                if (formedWords) {
+                    for (const fw of formedWords) { if (!isValidWord(fw.word)) { valid = false; break; } }
+                    if (valid) score = scoreWords(formedWords);
+                } else valid = false;
+                for (const t of tilesUsed) board[t.r][t.c] = null;
+                placedThisTurn = [];
+                if (valid && score > 0) moves.push({ tiles: [...tilesUsed], score, word: newWord });
+            }
+            // Continue through existing tiles
+            tryBuildWordContinue(r + dr, c + dc, dr, dc, available, tilesUsed, newWord, moves);
+            return;
+        }
+
+        if (available.length === 0) return;
+
+        const validLetters = getCrossConstraint(r, c, dr, dc);
+
+        for (let i = 0; i < available.length; i++) {
+            const letter = available[i];
+            const candidates = letter === '?' ? 'abcdefghijklmnopqrstuvwxyz'.split('') : [letter.toLowerCase()];
+
+            for (const tryLetter of candidates) {
+                if (validLetters && !validLetters.has(tryLetter)) continue;
+
+                const newWord = word + tryLetter;
+                let hasPrefix = false;
+                for (const w of WORDS) {
+                    if (w.startsWith(newWord)) { hasPrefix = true; break; }
+                }
+                if (!hasPrefix && !isValidWord(newWord)) continue;
+
+                const newAvail = [...available];
+                newAvail.splice(i, 1);
+                const newTiles = [...tilesUsed, { r, c, letter: tryLetter.toUpperCase(), isBlank: letter === '?' }];
+
+                if (isValidWord(newWord)) {
+                    const tempPlaced = [];
+                    for (const t of newTiles) {
+                        board[t.r][t.c] = { letter: t.letter, value: t.isBlank ? 0 : letterValue(t.letter), locked: false, isBlank: t.isBlank };
+                        tempPlaced.push({ r: t.r, c: t.c });
+                    }
+                    placedThisTurn = tempPlaced;
+                    const formedWords = getFormedWords();
+                    let valid = true, score = 0;
+                    if (formedWords) {
+                        for (const fw of formedWords) { if (!isValidWord(fw.word)) { valid = false; break; } }
+                        if (valid) score = scoreWords(formedWords);
+                    } else valid = false;
+                    for (const t of newTiles) board[t.r][t.c] = null;
+                    placedThisTurn = [];
+                    if (valid && score > 0) moves.push({ tiles: [...newTiles], score, word: newWord });
+                }
+
+                if (hasPrefix && newTiles.length < 7) {
+                    tryBuildWordContinue(r + dr, c + dc, dr, dc, newAvail, newTiles, newWord, moves);
+                }
+                break;
+            }
+            break; // Performance: only try first available tile
+        }
+    }
+
+    function getCrossConstraint(r, c, mainDr, mainDc) {
+        // Check what letters are valid at (r,c) based on cross-words
+        const crossDr = mainDc; // perpendicular
+        const crossDc = mainDr;
+
+        // See if there are adjacent tiles in cross direction
+        const before = cellAt(r - crossDr, c - crossDc);
+        const after = cellAt(r + crossDr, c + crossDc);
+        if (!before && !after) return null; // No cross-word constraint
+
+        // Build prefix and suffix
+        let prefix = '';
+        let sr = r - crossDr, sc = c - crossDc;
+        while (cellAt(sr, sc)) {
+            prefix = cellAt(sr, sc).letter.toLowerCase() + prefix;
+            sr -= crossDr; sc -= crossDc;
+        }
+        let suffix = '';
+        let er = r + crossDr, ec = c + crossDc;
+        while (cellAt(er, ec)) {
+            suffix += cellAt(er, ec).letter.toLowerCase();
+            er += crossDr; ec += crossDc;
+        }
+
+        const valid = new Set();
+        for (const ch of 'abcdefghijklmnopqrstuvwxyz') {
+            const crossWord = prefix + ch + suffix;
+            if (isValidWord(crossWord)) valid.add(ch);
+        }
+        return valid;
+    }
+
+    // ── Mode select ──
+    document.getElementById('mode-select').addEventListener('change', (e) => {
+        document.getElementById('diff-row').style.display = e.target.value === '1p' ? '' : 'none';
+    });
+
+    // ── Start Game ──
+    function startGame() {
+        gameMode = document.getElementById('mode-select').value;
+        difficulty = document.getElementById('diff-select').value;
+        p1Name = GameUtils.playerName.get(1);
+        p2Name = gameMode === '1p' ? 'Computer' : GameUtils.playerName.get(2);
+
+        board = Array.from({length:15}, () => Array(15).fill(null));
+        bag = createBag();
+        racks = [[], []];
+        scores = [0, 0];
+        currentPlayer = 0;
+        placedThisTurn = [];
+        selectedRackIdx = -1;
+        consecutivePasses = 0;
+        gameOver = false;
+        exchangeMode = false;
+        exchangeSelected.clear();
+        lastWordText = '';
+        firstMove = true;
+
+        drawTiles(racks[0], 7);
+        drawTiles(racks[1], 7);
+
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('gameover-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+
+        renderBoard();
+        renderRack();
+        renderScores();
+        setActionButtons(true);
+    }
+
+    // Expose functions for onclick
+    window.startGame = startGame;
+    window.submitWord = submitWord;
+    window.recallTiles = recallTiles;
+    window.shuffleRack = shuffleRack;
+    window.startExchange = startExchange;
+    window.passAction = passAction;
+    </script>
+</body>
+</html>
