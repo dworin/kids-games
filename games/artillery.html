@@ -328,7 +328,17 @@
             const h = Math.floor(Math.random() * (maxBldgH - minBldgH) + minBldgH);
             const colors = ['#2c3e50', '#34495e', '#1a252f', '#2d3436', '#283747', '#1c2833', '#212f3d'];
             const color = colors[Math.floor(Math.random() * colors.length)];
-            buildings.push({ x, w, h, color });
+            // Pre-generate static window lit states
+            const winW = 6, winH = 8, gapX = 14, gapY = 16;
+            const startX = x + 6;
+            const startY = CANVAS_H - h + 10;
+            const windows = [];
+            for (let wy = startY; wy < CANVAS_H - 10; wy += gapY) {
+                for (let wx = startX; wx < x + w - 10; wx += gapX) {
+                    windows.push({ x: wx, y: wy, lit: Math.random() > 0.3 });
+                }
+            }
+            buildings.push({ x, w, h, color, windows });
             x += w;
         }
         gameState.buildings = buildings;
@@ -467,16 +477,11 @@
             ctx.fillStyle = b.color;
             ctx.fillRect(b.x, CANVAS_H - b.h, b.w, b.h);
 
-            // Windows
-            const winW = 6, winH = 8, gapX = 14, gapY = 16;
-            const startX = b.x + 6;
-            const startY = CANVAS_H - b.h + 10;
-            for (let wy = startY; wy < CANVAS_H - 10; wy += gapY) {
-                for (let wx = startX; wx < b.x + b.w - 10; wx += gapX) {
-                    const lit = Math.random() > 0.3;
-                    ctx.fillStyle = lit ? '#f5e642' : '#1a1a2e';
-                    ctx.fillRect(wx, wy, winW, winH);
-                }
+            // Windows (use pre-generated static state)
+            const winW = 6, winH = 8;
+            for (const w of (b.windows || [])) {
+                ctx.fillStyle = w.lit ? '#f5e642' : '#1a1a2e';
+                ctx.fillRect(w.x, w.y, winW, winH);
             }
         }
     }
@@ -1011,6 +1016,29 @@
         twinkleRAF = requestAnimationFrame(throttledTick);
     }
     startTwinkle();
+
+    // ========== OCCASIONAL WINDOW LIGHT CHANGES ==========
+    function scheduleWindowFlicker() {
+        setTimeout(() => {
+            const buildings = gameState.buildings;
+            if (buildings && buildings.length > 0) {
+                // Toggle 1-2 random windows
+                const count = 1 + Math.floor(Math.random() * 2);
+                for (let i = 0; i < count; i++) {
+                    const b = buildings[Math.floor(Math.random() * buildings.length)];
+                    if (b.windows && b.windows.length > 0) {
+                        const w = b.windows[Math.floor(Math.random() * b.windows.length)];
+                        w.lit = !w.lit;
+                    }
+                }
+                if (!gameState.animating && document.getElementById('game-screen').style.display !== 'none') {
+                    render();
+                }
+            }
+            scheduleWindowFlicker();
+        }, 1500 + Math.random() * 2000); // change 1-2 windows every 1.5-3.5 seconds
+    }
+    scheduleWindowFlicker();
 
     // ========== 2-PLAYER TURN PASS ==========
     const origSwitchTurn = switchTurn;

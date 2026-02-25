@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Typing Tutor - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Source+Code+Pro:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+
+        /* ── Setup Screen ── */
+        #setup-screen { text-align: center; }
+        .setup-title { font-family: 'Fredoka', sans-serif; font-size: 2rem; font-weight: 700; margin-bottom: 4px; background: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .setup-sub { color: var(--text-secondary); margin-bottom: 18px; font-size: 0.95rem; }
+        .setup-section { margin: 14px 0; }
+        .setup-section > .sec-label { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+        .opt-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .opt-btn { flex: 1; max-width: 170px; min-width: 100px; padding: 12px 10px; background: var(--dark-bg); border: 2px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-family: 'Fredoka', sans-serif; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .opt-btn:hover { border-color: var(--primary-color); background: var(--card-hover); }
+        .opt-btn.active { border-color: var(--primary-color); background: var(--primary-color); color: #fff; }
+        .opt-btn .opt-icon { font-size: 1.4rem; display: block; margin-bottom: 2px; }
+        .opt-btn .opt-desc { font-size: 0.7rem; color: var(--text-secondary); display: block; margin-top: 2px; }
+        .opt-btn.active .opt-desc { color: rgba(255,255,255,0.75); }
+        .start-btn { display: block; margin: 22px auto 0; padding: 14px 60px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; border-radius: 12px; font-family: 'Fredoka', sans-serif; font-size: 1.3rem; font-weight: 700; cursor: pointer; letter-spacing: 2px; text-transform: uppercase; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 4px 18px rgba(16,185,129,0.3); }
+        .start-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(16,185,129,0.45); }
+        .start-btn:active { transform: translateY(0); }
+
+        /* ── Game Screen ── */
+        .stats-bar { display: flex; justify-content: space-around; align-items: center; background: var(--card-bg); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; flex-wrap: wrap; gap: 4px; }
+        .sbox { text-align: center; flex: 1; min-width: 60px; }
+        .sbox .sv { font-family: 'Fredoka', sans-serif; font-size: 1.25rem; font-weight: 700; color: var(--primary-color); display: block; line-height: 1.2; }
+        .sbox .sl { font-size: 0.6rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+        .sbox .sv.combo-hot { color: #f59e0b; }
+        .sbox .sv.combo-fire { color: #ef4444; }
+        .sbox .sv.combo-blaze { color: #ec4899; animation: blaze 0.3s ease-in-out infinite alternate; }
+        @keyframes blaze { to { transform: scale(1.15); } }
+        .canvas-wrap { display: flex; justify-content: center; margin: 6px 0; }
+        canvas { background: #0a0a2e; border-radius: 12px; max-width: 100%; height: auto; display: block; }
+        .text-area { background: var(--dark-bg); border: 2px solid var(--border-color); border-radius: 12px; padding: 20px 24px; margin: 8px 0; min-height: 60px; font-family: 'Source Code Pro', 'Courier New', monospace; font-size: 1.4rem; line-height: 2.2; letter-spacing: 0.5px; word-break: break-word; user-select: none; position: relative; cursor: text; transition: border-color 0.2s; }
+        .text-area:focus-within, .text-area.focused { border-color: var(--primary-color); }
+        .text-area .tap-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: var(--text-secondary); font-family: 'Fredoka', sans-serif; font-size: 1rem; pointer-events: none; opacity: 0.7; }
+        .ch { transition: color 0.1s; }
+        .ch-ok { color: #4ade80; }
+        .ch-err { color: #f87171; background: rgba(248,113,113,0.12); border-radius: 2px; }
+        .ch-cur { background: rgba(99,102,241,0.35); border-radius: 2px; animation: curPulse 0.9s ease-in-out infinite; }
+        .ch-pen { color: var(--text-secondary); }
+        @keyframes curPulse { 0%,100%{ background: rgba(99,102,241,0.2); } 50%{ background: rgba(99,102,241,0.55); } }
+        .progress-wrap { height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; margin: 4px 0 0; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary-color), var(--success-color)); border-radius: 3px; transition: width 0.25s ease; width: 0%; }
+        .game-btns { display: flex; gap: 10px; justify-content: center; margin-top: 8px; }
+        #hidden-input { position: absolute; left: -9999px; top: -9999px; opacity: 0; width: 1px; height: 1px; }
+
+        /* ── Level / Game Over Screens ── */
+        #level-screen, #gameover-screen { text-align: center; }
+        .result-title { font-family: 'Fredoka', sans-serif; font-size: 1.8rem; font-weight: 700; margin-bottom: 6px; }
+        .result-title.win { color: #4ade80; }
+        .result-title.fail { color: #f87171; }
+        .result-msg { color: var(--text-secondary); margin-bottom: 16px; font-size: 1rem; }
+        .result-stars { font-size: 2.2rem; margin: 8px 0 12px; letter-spacing: 8px; }
+        .result-stats { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 14px 0; }
+        .rs-item { background: var(--dark-bg); border-radius: 10px; padding: 12px 18px; text-align: center; min-width: 90px; }
+        .rs-item .rv { font-family: 'Fredoka', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--primary-color); display: block; }
+        .rs-item .rl { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+        .vs-row { display: flex; justify-content: center; gap: 24px; align-items: center; margin: 12px 0; }
+        .vs-col { text-align: center; }
+        .vs-col .pname { font-weight: 700; margin-bottom: 4px; }
+        .vs-col .pval { font-family: 'Fredoka', sans-serif; font-size: 1.6rem; font-weight: 700; color: var(--primary-color); }
+        .vs-sep { font-size: 1.4rem; color: var(--text-secondary); font-weight: 700; }
+        .level-desc { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 10px; }
+
+        /* ── Time Attack Timer ── */
+        .ta-timer { font-family: 'Fredoka', sans-serif; font-size: 1.8rem; font-weight: 700; color: #f59e0b; text-align: center; margin: 4px 0; }
+        .ta-timer.low { color: #ef4444; animation: blaze 0.4s ease-in-out infinite alternate; }
+
+        @media (max-width: 600px) {
+            .stats-bar { padding: 6px 8px; }
+            .sbox .sv { font-size: 1rem; }
+            .text-area { font-size: 1.1rem; padding: 14px 16px; line-height: 2; }
+            .opt-btn { max-width: 140px; padding: 10px 6px; font-size: 0.85rem; }
+            .start-btn { padding: 12px 40px; font-size: 1.1rem; }
+            .setup-title { font-size: 1.5rem; }
+            .result-stats { gap: 6px; }
+            .rs-item { padding: 8px 12px; min-width: 70px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Typing Tutor</h1>
+            <button class="back-btn" onclick="GameUtils.goToLauncher()">Home</button>
+        </div>
+
+        <!-- ── Setup ── -->
+        <div class="game-container" id="setup-screen">
+            <div class="setup-title">Typing Tutor</div>
+            <p class="setup-sub">Run through a colorful world as you type!</p>
+            <div class="setup-section">
+                <div class="sec-label">Mode</div>
+                <div class="opt-row" id="mode-row">
+                    <button class="opt-btn active" data-val="adventure"><span class="opt-icon">&#127956;</span>Adventure<span class="opt-desc">10 levels of fun</span></button>
+                    <button class="opt-btn" data-val="practice"><span class="opt-icon">&#9998;</span>Practice<span class="opt-desc">Relax &amp; type</span></button>
+                    <button class="opt-btn" data-val="timeAttack"><span class="opt-icon">&#9201;</span>Time Attack<span class="opt-desc">60 seconds!</span></button>
+                </div>
+            </div>
+            <div class="setup-section">
+                <div class="sec-label">Difficulty</div>
+                <div class="opt-row" id="diff-row">
+                    <button class="opt-btn" data-val="easy">Easy</button>
+                    <button class="opt-btn active" data-val="medium">Medium</button>
+                    <button class="opt-btn" data-val="hard">Hard</button>
+                </div>
+            </div>
+            <div class="setup-section">
+                <div class="sec-label">Players</div>
+                <div class="opt-row" id="players-row">
+                    <button class="opt-btn active" data-val="1">1 Player</button>
+                    <button class="opt-btn" data-val="2">2 Players</button>
+                </div>
+            </div>
+            <button class="start-btn" onclick="startGame()">Start Typing!</button>
+            <div style="margin-top:18px;" id="hs-setup"></div>
+        </div>
+
+        <!-- ── Game ── -->
+        <div id="game-screen" style="display:none;">
+            <div class="stats-bar">
+                <div class="sbox"><span class="sv" id="s-level">1</span><span class="sl">Level</span></div>
+                <div class="sbox"><span class="sv" id="s-wpm">0</span><span class="sl">WPM</span></div>
+                <div class="sbox"><span class="sv" id="s-acc">100%</span><span class="sl">Accuracy</span></div>
+                <div class="sbox"><span class="sv" id="s-score">0</span><span class="sl">Score</span></div>
+                <div class="sbox"><span class="sv" id="s-combo">0</span><span class="sl">Combo</span></div>
+            </div>
+            <div id="ta-timer-wrap" style="display:none;"><div class="ta-timer" id="ta-timer">60</div></div>
+            <div class="canvas-wrap"><canvas id="gc" width="800" height="280"></canvas></div>
+            <div class="text-area" id="text-display" onclick="focusInput()"><span class="tap-hint" id="tap-hint">Click here or start typing...</span></div>
+            <div class="progress-wrap"><div class="progress-fill" id="progress-fill"></div></div>
+            <div class="game-btns">
+                <button class="btn btn-secondary" onclick="quitGame()">Quit</button>
+            </div>
+        </div>
+
+        <!-- ── Level Complete ── -->
+        <div class="game-container" id="level-screen" style="display:none;"></div>
+
+        <!-- ── Game Over ── -->
+        <div class="game-container" id="gameover-screen" style="display:none;"></div>
+
+        <!-- ── High Scores ── -->
+        <div class="game-container" id="hs-container">
+            <h3 style="margin-bottom:12px;">High Scores</h3>
+            <div id="high-scores"></div>
+            <div style="margin-top:14px;"><div id="game-stats"></div></div>
+        </div>
+    </div>
+
+    <input type="text" id="hidden-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" tabindex="-1">
+
+    <script src="../js/utils.js"></script>
+    <script>
+    /* ================================================================
+       TYPING TUTOR – A Mario Teaches Typing-inspired game
+       ================================================================ */
+
+    // ===== CONSTANTS =====
+    const CW = 800, CH = 280, GROUND_Y = 242, CHAR_X = 160;
+    const SCENE_W = 4000;
+
+    // ===== WORD LISTS =====
+    const W = {
+        homeKeys: 'f j d k s l a g h'.split(' '),
+        homeWords: 'sad lad ash has had ask dad gal lag gas glad flag dash flash glass slash salad flask fall hall shall all'.split(' '),
+        topRow: 'we up at or to it got put wet top pet pot rip out you tip try true trip type your riot port write power quiet sort'.split(' '),
+        bottomRow: 'can van man box mix fix cab jam zinc back bake cave move come zone name vine bone next buzz exam maze cozy'.split(' '),
+        common: 'the and for are but not you all can had her was one our out day has his how its let may new now old see way who boy did get him just know take come good look make over will about after think great where right still world being'.split(' '),
+        longer: 'adventure beautiful champion dangerous education fantastic gorgeous happiness important knowledge landscape marvelous nightfall orchestra perfectly questions reasoning surprised telephone wonderful yesterday'.split(' '),
+        phrases: ['the quick brown fox','jumps over the lazy dog','a bright sunny day','under the blue sky','running through fields','every day is new','typing makes you faster','practice makes perfect','keep on learning','reach for the stars','the world is beautiful','never give up','one step at a time','make it happen today','dream big and aim high','the sky is the limit'],
+        sentences: ['The quick brown fox jumps over the lazy dog.','Practice makes perfect so keep on typing.','Every great adventure starts with courage.','The best way to learn is to practice daily.','Stars cannot shine without darkness.','Be the change you wish to see in the world.','A journey begins with a single step forward.','Keep your eyes on the stars and feet on the ground.','Hard work beats talent when talent does not work.','The only limit is the one you set yourself.'],
+        capitalSentences: ['Alice and Bob went to the park today.','London is the capital of England.','The United States has fifty states.','Every Monday I practice my typing skills.','My friend Sarah loves to read books.','New York City never sleeps at night.','The Pacific Ocean is the largest ocean.','Jupiter is the biggest planet in our system.','Mount Everest is the tallest mountain.','The Amazon River flows through South America.'],
+        master: ['The answer is 42, but what is the question?','Call me at 555-1234 after 5 PM today.','The 3 little pigs built houses of straw, sticks, and bricks.','On July 4th, 1776, America declared independence!','"To be, or not to be," is a famous quote.','There are 26 letters in the English alphabet.','My email is user@example.com; send it today!','The temperature is 72 degrees Fahrenheit (22 C).','Room #204 is on the 3rd floor, turn right.','100% of the shots you do not take will miss.']
+    };
+
+    // ===== LEVELS =====
+    const LEVELS = [
+        { name:'Home Sweet Home', desc:'Master the home row keys', pool:'homeKeys', target:40, minAcc:60, gen:'keys' },
+        { name:'Word Wizard', desc:'Short home row words', pool:'homeWords', target:55, minAcc:65, gen:'words' },
+        { name:'Reaching Up', desc:'Adding the top row', pool:'topRow', target:65, minAcc:70, gen:'words' },
+        { name:'Down to Earth', desc:'Adding the bottom row', pool:'bottomRow', target:65, minAcc:70, gen:'words' },
+        { name:'Word Power', desc:'Common everyday words', pool:'common', target:85, minAcc:75, gen:'words' },
+        { name:'Vocabulary Quest', desc:'Longer challenging words', pool:'longer', target:100, minAcc:75, gen:'words' },
+        { name:'Phrase Craze', desc:'Short phrases', pool:'phrases', target:120, minAcc:78, gen:'phrases' },
+        { name:'Sentence Sprint', desc:'Complete sentences', pool:'sentences', target:140, minAcc:80, gen:'phrases' },
+        { name:'Capital Letters', desc:'Proper capitalization', pool:'capitalSentences', target:130, minAcc:80, gen:'phrases' },
+        { name:'Grand Master', desc:'The ultimate challenge!', pool:'master', target:180, minAcc:82, gen:'phrases' }
+    ];
+
+    // ===== STATE =====
+    let G, ctx, canvas, animId;
+    let clouds = [], mountains = [], trees = [], flowers = [];
+
+    function freshState() {
+        return {
+            screen: 'menu', mode: 'adventure', diff: 'medium', players: 1, currentPlayer: 1,
+            level: 0, score: 0, combo: 0, maxCombo: 0,
+            totalChars: 0, correctChars: 0, wrongChars: 0,
+            text: '', cursor: 0, charResults: [],
+            startTime: 0, lastKeyTime: 0,
+            scrollX: 0, targetScroll: 0,
+            jumpTimer: 0, stumbleTimer: 0,
+            particles: [],
+            timeLeft: 60, timerInterval: null,
+            p1: null, p2: null, savedText: '',
+            totalScore: 0, levelsCleared: 0
+        };
+    }
+
+    // ===== SCENE GENERATION =====
+    function initScene() {
+        clouds = []; mountains = []; trees = []; flowers = [];
+        for (let i = 0; i < 14; i++) clouds.push({ x: (i/14)*SCENE_W, y: 25+Math.random()*65, w: 40+Math.random()*50 });
+        for (let i = 0; i < 8; i++) mountains.push({ x: (i/8)*SCENE_W, h: 55+Math.random()*75, w: 110+Math.random()*90 });
+        for (let i = 0; i < 30; i++) trees.push({ x: (i/30)*SCENE_W, h: 30+Math.random()*40, shade: Math.random()*0.15 });
+        for (let i = 0; i < 50; i++) flowers.push({ x: (i/50)*SCENE_W, c: ['#ec4899','#f59e0b','#a855f7','#ef4444'][Math.floor(Math.random()*4)] });
+    }
+
+    // ===== DRAWING HELPERS =====
+    function rr(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+        ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+        ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+        ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath(); ctx.fill();
+    }
+
+    function parallaxX(worldX, speed) {
+        let x = worldX - G.scrollX * speed;
+        const sw = SCENE_W;
+        x = ((x % sw) + sw) % sw;
+        if (x > CW + 120) x -= sw;
+        return x;
+    }
+
+    // ===== CANVAS RENDERING =====
+    function drawScene() {
+        // Sky gradient
+        const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+        sky.addColorStop(0, '#4fc3f7');
+        sky.addColorStop(0.55, '#81d4fa');
+        sky.addColorStop(1, '#ffe0b2');
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, CW, CH);
+
+        // Sun
+        ctx.fillStyle = '#fff9c4';
+        ctx.beginPath(); ctx.arc(680, 55, 28, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,249,196,0.15)';
+        ctx.beginPath(); ctx.arc(680, 55, 50, 0, Math.PI*2); ctx.fill();
+
+        // Clouds
+        clouds.forEach(c => {
+            const cx = parallaxX(c.x, 0.08);
+            if (cx < -80 || cx > CW+80) return;
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.beginPath();
+            ctx.arc(cx, c.y, c.w*0.35, 0, Math.PI*2);
+            ctx.arc(cx+c.w*0.3, c.y-c.w*0.15, c.w*0.3, 0, Math.PI*2);
+            ctx.arc(cx+c.w*0.6, c.y, c.w*0.28, 0, Math.PI*2);
+            ctx.arc(cx+c.w*0.25, c.y-c.w*0.28, c.w*0.25, 0, Math.PI*2);
+            ctx.arc(cx+c.w*0.45, c.y-c.w*0.12, c.w*0.3, 0, Math.PI*2);
+            ctx.fill();
+        });
+
+        // Mountains
+        mountains.forEach(m => {
+            const mx = parallaxX(m.x, 0.12);
+            if (mx < -m.w || mx > CW+m.w) return;
+            const grad = ctx.createLinearGradient(mx, GROUND_Y-m.h, mx, GROUND_Y);
+            grad.addColorStop(0, '#7986cb'); grad.addColorStop(1, '#5c6bc0');
+            ctx.fillStyle = grad;
+            ctx.beginPath(); ctx.moveTo(mx-m.w/2, GROUND_Y); ctx.lineTo(mx, GROUND_Y-m.h); ctx.lineTo(mx+m.w/2, GROUND_Y); ctx.closePath(); ctx.fill();
+            // Snow cap
+            ctx.fillStyle = '#e8eaf6';
+            ctx.beginPath(); ctx.moveTo(mx-m.w*0.07, GROUND_Y-m.h+m.h*0.15); ctx.lineTo(mx, GROUND_Y-m.h); ctx.lineTo(mx+m.w*0.07, GROUND_Y-m.h+m.h*0.15); ctx.closePath(); ctx.fill();
+        });
+
+        // Far hills (sine curves)
+        drawHills(185, '#388e3c', 0.25, 18, 0.007);
+        drawHills(200, '#43a047', 0.35, 14, 0.009);
+
+        // Trees
+        trees.forEach(t => {
+            const tx = parallaxX(t.x, 0.4);
+            if (tx < -30 || tx > CW+30) return;
+            const base = 200 + Math.sin(t.x*0.005)*12;
+            ctx.fillStyle = '#5d4037';
+            ctx.fillRect(tx-2, base-t.h*0.3, 5, t.h*0.35);
+            const g = `rgb(${46+t.shade*200|0},${125+t.shade*60|0},${50+t.shade*80|0})`;
+            ctx.fillStyle = g;
+            for (let i = 0; i < 3; i++) {
+                const ly = base - t.h*0.3 - i*t.h*0.22;
+                const lw = (t.h*0.5)*(1-i*0.2);
+                ctx.beginPath(); ctx.moveTo(tx-lw/2, ly); ctx.lineTo(tx+1, ly-t.h*0.28); ctx.lineTo(tx+lw/2, ly); ctx.closePath(); ctx.fill();
+            }
+        });
+
+        // Near hills
+        drawHills(218, '#66bb6a', 0.55, 10, 0.011);
+
+        // Ground
+        ctx.fillStyle = '#558b2f';
+        ctx.fillRect(0, GROUND_Y, CW, CH-GROUND_Y);
+        ctx.fillStyle = '#8d6e63';
+        ctx.fillRect(0, GROUND_Y+6, CW, 22);
+        // Path dashes
+        const dashOff = (G.scrollX*0.95) % 36;
+        ctx.fillStyle = '#795548';
+        for (let x = -dashOff; x < CW+36; x += 36) ctx.fillRect(x, GROUND_Y+15, 14, 3);
+        // Grass top
+        ctx.fillStyle = '#7cb342';
+        ctx.fillRect(0, GROUND_Y, CW, 6);
+        ctx.fillStyle = '#33691e';
+        ctx.fillRect(0, GROUND_Y+28, CW, CH-GROUND_Y-28);
+
+        // Flowers
+        flowers.forEach(f => {
+            const fx = parallaxX(f.x, 0.8);
+            if (fx < -5 || fx > CW+5) return;
+            ctx.fillStyle = '#558b2f';
+            ctx.fillRect(fx, GROUND_Y-6, 2, 7);
+            ctx.fillStyle = f.c;
+            ctx.beginPath(); ctx.arc(fx+1, GROUND_Y-8, 3, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fff9c4';
+            ctx.beginPath(); ctx.arc(fx+1, GROUND_Y-8, 1.2, 0, Math.PI*2); ctx.fill();
+        });
+
+        // Character
+        drawCharacter(CHAR_X, GROUND_Y);
+
+        // Particles
+        drawParticles();
+    }
+
+    function drawHills(baseY, color, speed, amp, freq) {
+        const off = G.scrollX * speed;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, CH);
+        for (let x = 0; x <= CW; x += 4) {
+            const y = baseY + Math.sin((x+off)*freq)*amp + Math.sin((x+off)*freq*0.5+2)*amp*0.4;
+            ctx.lineTo(x, y);
+        }
+        ctx.lineTo(CW, CH);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // ===== CHARACTER =====
+    function drawCharacter(cx, gy) {
+        const now = performance.now();
+        const moving = now - G.lastKeyTime < 600;
+        const t = G.scrollX * 0.12;
+        const bob = moving ? Math.sin(t*2) * 2.5 : 0;
+        const legOff = moving ? Math.sin(t*2) * 7 : 0;
+        const armOff = moving ? Math.sin(t*2) * 5 : 0;
+
+        let jy = 0;
+        if (G.jumpTimer > 0) {
+            jy = -Math.sin((G.jumpTimer / 0.35) * Math.PI) * 22;
+        }
+
+        const y = gy + bob + jy;
+        const stumble = G.stumbleTimer > 0;
+
+        ctx.save();
+        if (stumble) {
+            ctx.translate(cx, y - 20);
+            ctx.rotate(0.18);
+            ctx.translate(-cx, -(y - 20));
+        }
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        ctx.beginPath(); ctx.ellipse(cx, gy+2, 15, 4, 0, 0, Math.PI*2); ctx.fill();
+
+        // Back leg
+        ctx.fillStyle = stumble ? '#b71c1c' : '#1565c0';
+        rr(cx-7, y-7+legOff, 7, 14, 2);
+        ctx.fillStyle = '#4e342e';
+        rr(cx-9, y+6+legOff, 10, 5, 2);
+
+        // Front leg
+        ctx.fillStyle = stumble ? '#c62828' : '#1976d2';
+        rr(cx+1, y-7-legOff, 7, 14, 2);
+        ctx.fillStyle = '#5d4037';
+        rr(cx-1, y+6-legOff, 10, 5, 2);
+
+        // Body
+        ctx.fillStyle = stumble ? '#c62828' : '#1e88e5';
+        rr(cx-9, y-28, 19, 23, 4);
+
+        // Belt
+        ctx.fillStyle = '#fdd835';
+        ctx.fillRect(cx-9, y-9, 19, 3);
+
+        // Back arm
+        ctx.fillStyle = stumble ? '#b71c1c' : '#1565c0';
+        rr(cx-13, y-26-armOff, 6, 14, 2);
+        ctx.fillStyle = '#ffccbc';
+        ctx.beginPath(); ctx.arc(cx-10, y-12-armOff, 3, 0, Math.PI*2); ctx.fill();
+
+        // Front arm
+        ctx.fillStyle = stumble ? '#c62828' : '#1e88e5';
+        rr(cx+8, y-26+armOff, 6, 14, 2);
+        ctx.fillStyle = '#ffccbc';
+        ctx.beginPath(); ctx.arc(cx+11, y-12+armOff, 3, 0, Math.PI*2); ctx.fill();
+
+        // Head
+        ctx.fillStyle = '#ffccbc';
+        ctx.beginPath(); ctx.arc(cx+1, y-38, 11, 0, Math.PI*2); ctx.fill();
+
+        // Cap
+        ctx.fillStyle = '#d32f2f';
+        ctx.beginPath(); ctx.ellipse(cx+1, y-43, 12, 7, 0, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = '#c62828';
+        rr(cx-6, y-40, 18, 4, 1);
+        // Cap button
+        ctx.fillStyle = '#ffeb3b';
+        ctx.beginPath(); ctx.arc(cx+1, y-49, 2.5, 0, Math.PI*2); ctx.fill();
+
+        // Eyes
+        ctx.fillStyle = '#333';
+        ctx.fillRect(cx-4, y-41, 3, 3.5);
+        ctx.fillRect(cx+3, y-41, 3, 3.5);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(cx-3, y-41, 1.5, 1.5);
+        ctx.fillRect(cx+4, y-41, 1.5, 1.5);
+
+        // Mouth
+        ctx.strokeStyle = '#5d4037';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        if (stumble) {
+            ctx.arc(cx+1, y-33, 2.5, 0.2*Math.PI, 0.8*Math.PI);
+            ctx.stroke();
+            // X eyes for stumble
+        } else if (G.jumpTimer > 0) {
+            ctx.arc(cx+1, y-34, 3.5, 0.1*Math.PI, 0.9*Math.PI);
+            ctx.stroke();
+        } else {
+            ctx.arc(cx+1, y-34, 2.5, 0.15*Math.PI, 0.85*Math.PI);
+            ctx.stroke();
+        }
+
+        // Cheeks
+        ctx.fillStyle = 'rgba(255,138,128,0.25)';
+        ctx.beginPath(); ctx.arc(cx-6, y-36, 3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx+8, y-36, 3, 0, Math.PI*2); ctx.fill();
+
+        ctx.restore();
+    }
+
+    // ===== PARTICLES =====
+    function spawnDust() {
+        for (let i = 0; i < 2; i++) {
+            G.particles.push({
+                type:'dust', x: CHAR_X-5+Math.random()*10, y: GROUND_Y+Math.random()*4,
+                vx: -15-Math.random()*20, vy: -8-Math.random()*12,
+                life: 1, decay: 2.5+Math.random(), size: 2+Math.random()*2,
+                color: 'rgba(161,136,127,'
+            });
+        }
+    }
+
+    function spawnSparkles() {
+        for (let i = 0; i < 3; i++) {
+            G.particles.push({
+                type:'sparkle', x: CHAR_X+10+Math.random()*20, y: GROUND_Y-30-Math.random()*30,
+                vx: 20+Math.random()*30, vy: -30-Math.random()*40,
+                life: 1, decay: 2+Math.random(), size: 2+Math.random()*2.5,
+                color: ['#fdd835','#ffeb3b','#fff9c4','#ffcc02'][Math.floor(Math.random()*4)]
+            });
+        }
+    }
+
+    function spawnScoreText(text, color) {
+        G.particles.push({
+            type:'text', x: CHAR_X+30+Math.random()*20, y: GROUND_Y-50-Math.random()*20,
+            vx: 10, vy: -50, life: 1, decay: 1.2, size: 14, color: color || '#fdd835', text: text
+        });
+    }
+
+    function spawnWordComplete() {
+        for (let i = 0; i < 8; i++) {
+            const a = (i/8)*Math.PI*2;
+            G.particles.push({
+                type:'sparkle', x: CHAR_X, y: GROUND_Y-35,
+                vx: Math.cos(a)*50, vy: Math.sin(a)*50-20,
+                life: 1, decay: 1.8, size: 3+Math.random()*2,
+                color: ['#4ade80','#fbbf24','#60a5fa','#f472b6'][Math.floor(Math.random()*4)]
+            });
+        }
+    }
+
+    function updateParticles(dt) {
+        for (let i = G.particles.length-1; i >= 0; i--) {
+            const p = G.particles[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.life -= p.decay * dt;
+            if (p.type === 'dust') p.vy += 30*dt;
+            if (p.life <= 0) G.particles.splice(i, 1);
+        }
+    }
+
+    function drawParticles() {
+        G.particles.forEach(p => {
+            const a = Math.max(0, Math.min(1, p.life));
+            ctx.globalAlpha = a;
+            if (p.type === 'text') {
+                ctx.fillStyle = p.color;
+                ctx.font = `bold ${p.size}px Fredoka, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.text, p.x, p.y);
+            } else if (p.type === 'dust') {
+                ctx.fillStyle = p.color + a.toFixed(2) + ')';
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size*a, 0, Math.PI*2); ctx.fill();
+            } else {
+                ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.size*a, 0, Math.PI*2); ctx.fill();
+            }
+        });
+        ctx.globalAlpha = 1;
+    }
+
+    // ===== TEXT GENERATION =====
+    function genText(pool, targetLen, genType) {
+        const list = W[pool];
+        let text = '';
+        if (genType === 'keys') {
+            while (text.length < targetLen) {
+                if (text) text += ' ';
+                text += list[Math.floor(Math.random()*list.length)];
+            }
+        } else if (genType === 'words') {
+            const shuffled = GameUtils.shuffleArray([...list]);
+            let idx = 0;
+            while (text.length < targetLen) {
+                if (text) text += ' ';
+                text += shuffled[idx % shuffled.length];
+                idx++;
+            }
+        } else {
+            const shuffled = GameUtils.shuffleArray([...list]);
+            let idx = 0;
+            while (text.length < targetLen) {
+                if (text) text += ' ';
+                text += shuffled[idx % shuffled.length];
+                idx++;
+            }
+        }
+        return text;
+    }
+
+    function getTextForLevel(lvl) {
+        const L = LEVELS[lvl];
+        return genText(L.pool, L.target, L.gen);
+    }
+
+    function getTextForPractice() {
+        const pools = { easy: ['homeWords','topRow','bottomRow'], medium: ['common','longer','phrases'], hard: ['sentences','capitalSentences','master'] };
+        const p = pools[G.diff];
+        const pool = p[Math.floor(Math.random()*p.length)];
+        const gen = ['sentences','capitalSentences','master','phrases'].includes(pool) ? 'phrases' : 'words';
+        return genText(pool, 120, gen);
+    }
+
+    function getTextForTimeAttack() {
+        const pools = { easy: 'common', medium: 'longer', hard: 'master' };
+        const pool = pools[G.diff];
+        const gen = pool === 'master' ? 'phrases' : 'words';
+        return genText(pool, 200, gen);
+    }
+
+    // ===== TYPING ENGINE =====
+    function handleInput(ch) {
+        if (G.screen !== 'playing' || G.cursor >= G.text.length) return;
+        if (!G.startTime) G.startTime = Date.now();
+
+        const expected = G.text[G.cursor];
+        G.lastKeyTime = performance.now();
+        G.totalChars++;
+
+        if (ch === expected) {
+            G.charResults[G.cursor] = 'ok';
+            G.correctChars++;
+            G.combo++;
+            G.maxCombo = Math.max(G.maxCombo, G.combo);
+
+            // Scoring with combo multiplier
+            let mult = 1;
+            if (G.combo >= 50) mult = 5;
+            else if (G.combo >= 20) mult = 3;
+            else if (G.combo >= 10) mult = 2;
+            else if (G.combo >= 5) mult = 1.5;
+            const pts = Math.floor(10 * mult);
+            G.score += pts;
+
+            // Scroll
+            G.targetScroll += 12;
+
+            // Effects
+            spawnSparkles();
+            spawnDust();
+            if (G.combo > 0 && G.combo % 10 === 0) spawnScoreText(G.combo + 'x COMBO!', '#ec4899');
+
+            // Check word boundary
+            const nextIsSpace = G.cursor+1 < G.text.length && G.text[G.cursor+1] === ' ';
+            const isEnd = G.cursor+1 >= G.text.length;
+            const prevIsSpace = G.cursor > 0 && G.text[G.cursor-1] === ' ';
+            if ((expected === ' ') || isEnd) {
+                G.jumpTimer = 0.35;
+                spawnWordComplete();
+                spawnScoreText('+' + pts, '#4ade80');
+            }
+        } else {
+            G.charResults[G.cursor] = 'err';
+            G.wrongChars++;
+            G.combo = 0;
+            G.stumbleTimer = 0.3;
+        }
+
+        G.cursor++;
+        renderText();
+        updateStatsUI();
+
+        // Check completion
+        if (G.cursor >= G.text.length) {
+            onTextDone();
+        }
+    }
+
+    function getWPM() {
+        if (!G.startTime) return 0;
+        const mins = (Date.now() - G.startTime) / 60000;
+        if (mins < 0.05) return 0;
+        return Math.round((G.correctChars / 5) / mins);
+    }
+
+    function getAcc() {
+        if (G.totalChars === 0) return 100;
+        return Math.round((G.correctChars / G.totalChars) * 100);
+    }
+
+    // ===== TEXT RENDERING =====
+    function renderText() {
+        const el = document.getElementById('text-display');
+        document.getElementById('tap-hint').style.display = 'none';
+        let html = '';
+        for (let i = 0; i < G.text.length; i++) {
+            let cls = 'ch ';
+            if (i < G.cursor) cls += G.charResults[i] === 'ok' ? 'ch-ok' : 'ch-err';
+            else if (i === G.cursor) cls += 'ch-cur';
+            else cls += 'ch-pen';
+            let c = G.text[i];
+            if (c === ' ') c = '\u00A0';
+            html += `<span class="${cls}">${c}</span>`;
+        }
+        el.innerHTML = html;
+    }
+
+    function updateStatsUI() {
+        document.getElementById('s-wpm').textContent = getWPM();
+        const acc = getAcc();
+        document.getElementById('s-acc').textContent = acc + '%';
+        document.getElementById('s-score').textContent = G.score;
+
+        const comboEl = document.getElementById('s-combo');
+        comboEl.textContent = G.combo;
+        comboEl.className = 'sv' + (G.combo >= 50 ? ' combo-blaze' : G.combo >= 20 ? ' combo-fire' : G.combo >= 10 ? ' combo-hot' : '');
+
+        // Level label
+        if (G.mode === 'adventure') {
+            document.getElementById('s-level').textContent = (G.level+1) + '/10';
+        } else if (G.mode === 'practice') {
+            document.getElementById('s-level').textContent = 'Practice';
+        } else {
+            document.getElementById('s-level').textContent = 'Blitz';
+        }
+
+        // Progress
+        const pct = G.text.length > 0 ? Math.min(100, (G.cursor / G.text.length) * 100) : 0;
+        document.getElementById('progress-fill').style.width = pct + '%';
+    }
+
+    // ===== GAME FLOW =====
+    function startGame() {
+        G = freshState();
+        G.mode = getSelected('mode-row');
+        G.diff = getSelected('diff-row');
+        G.players = parseInt(getSelected('players-row'));
+        G.currentPlayer = 1;
+
+        initScene();
+        startRound();
+    }
+
+    function startRound() {
+        G.cursor = 0;
+        G.charResults = [];
+        G.totalChars = 0;
+        G.correctChars = 0;
+        G.wrongChars = 0;
+        G.startTime = 0;
+        G.lastKeyTime = 0;
+        G.scrollX = 0;
+        G.targetScroll = 0;
+        G.jumpTimer = 0;
+        G.stumbleTimer = 0;
+        G.particles = [];
+        G.combo = 0;
+        G.maxCombo = 0;
+        G.score = G.mode === 'adventure' ? G.score : 0;
+
+        if (G.players === 2 && G.currentPlayer === 2 && G.savedText) {
+            G.text = G.savedText;
+        } else if (G.mode === 'adventure') {
+            G.text = getTextForLevel(G.level);
+        } else if (G.mode === 'practice') {
+            G.text = getTextForPractice();
+        } else {
+            G.text = getTextForTimeAttack();
+            G.timeLeft = 60;
+        }
+
+        if (G.players === 2 && G.currentPlayer === 1) G.savedText = G.text;
+        G.charResults = new Array(G.text.length).fill(null);
+
+        showScreen('game-screen');
+        renderText();
+        updateStatsUI();
+
+        // Time attack timer
+        const taWrap = document.getElementById('ta-timer-wrap');
+        if (G.mode === 'timeAttack') {
+            taWrap.style.display = '';
+            updateTATimer();
+            G.timerInterval = setInterval(tickTA, 1000);
+        } else {
+            taWrap.style.display = 'none';
+        }
+
+        G.screen = 'playing';
+        focusInput();
+
+        if (!animId) { lastFrameTime = performance.now(); gameLoop(lastFrameTime); }
+
+        // Show level intro for adventure
+        if (G.mode === 'adventure') {
+            const L = LEVELS[G.level];
+            const pName = GameUtils.playerName.get(G.currentPlayer);
+            const label = G.players === 2 ? ` (${pName})` : '';
+            GameUtils.showModal(
+                `Level ${G.level+1}: ${L.name}`,
+                `<p style="color:var(--text-secondary)">${L.desc}</p><p style="margin-top:8px;font-size:0.85rem;color:var(--text-secondary)">Type ${L.target}+ characters with ${L.minAcc}% accuracy${label}</p>`,
+                [{ text: 'Go!', primary: true }]
+            ).then(() => focusInput());
+        } else if (G.players === 2) {
+            const pName = GameUtils.playerName.get(G.currentPlayer);
+            GameUtils.showModal(`${pName}'s Turn`, `Get ready to type!`, [{ text: 'Start', primary: true }]).then(() => focusInput());
+        }
+    }
+
+    function tickTA() {
+        G.timeLeft--;
+        updateTATimer();
+        if (G.timeLeft <= 0) {
+            clearInterval(G.timerInterval);
+            G.timerInterval = null;
+            onTextDone();
+        }
+    }
+
+    function updateTATimer() {
+        const el = document.getElementById('ta-timer');
+        el.textContent = G.timeLeft;
+        el.className = 'ta-timer' + (G.timeLeft <= 10 ? ' low' : '');
+    }
+
+    function onTextDone() {
+        G.screen = 'done';
+        if (G.timerInterval) { clearInterval(G.timerInterval); G.timerInterval = null; }
+
+        const wpm = getWPM();
+        const acc = getAcc();
+        const stats = { wpm, acc, score: G.score, combo: G.maxCombo, correct: G.correctChars, wrong: G.wrongChars };
+
+        // 2-player: save and switch
+        if (G.players === 2 && G.currentPlayer === 1) {
+            G.p1 = { ...stats };
+            G.currentPlayer = 2;
+            G.score = 0;
+            GameUtils.showModal('Pass the Device', `<p>Hand the device to <strong>${GameUtils.playerName.get(2)}</strong></p>`, [{ text: 'Ready', primary: true }]).then(() => startRound());
+            return;
+        }
+        if (G.players === 2 && G.currentPlayer === 2) {
+            G.p2 = { ...stats };
+            show2PResult();
+            return;
+        }
+
+        // Single player
+        if (G.mode === 'adventure') {
+            const L = LEVELS[G.level];
+            if (acc >= L.minAcc) {
+                G.levelsCleared++;
+                // Add bonuses
+                if (acc === 100) G.score += 2000;
+                else if (acc > 95) G.score += 500;
+                else if (acc > 90) G.score += 200;
+                else if (acc > 85) G.score += 100;
+                G.score += wpm * 10;
+                G.totalScore = G.score;
+                showLevelComplete(wpm, acc, true);
+            } else {
+                showLevelComplete(wpm, acc, false);
+            }
+        } else if (G.mode === 'practice') {
+            showPracticeResult(wpm, acc);
+        } else {
+            showTimeAttackResult(wpm, acc);
+        }
+    }
+
+    function showLevelComplete(wpm, acc, passed) {
+        const L = LEVELS[G.level];
+        const stars = acc === 100 ? 3 : (acc > 90 && wpm > 30) ? 3 : (acc > 82 && wpm > 20) ? 2 : 1;
+        const starStr = (passed ? '\u2B50' : '\u2606').repeat(passed ? stars : 0) + (passed ? '\u2606'.repeat(3-stars) : '');
+        const msg = getPerformanceMsg(wpm, acc, passed);
+        const isLastLevel = G.level >= LEVELS.length - 1;
+
+        let html = `<div class="result-title ${passed ? 'win' : 'fail'}">${passed ? (isLastLevel ? 'YOU WIN!' : 'Level Complete!') : 'Try Again!'}</div>`;
+        html += `<div class="level-desc">Level ${G.level+1}: ${L.name}</div>`;
+        if (passed) html += `<div class="result-stars">${starStr}</div>`;
+        html += `<div class="result-msg">${msg}</div>`;
+        html += `<div class="result-stats">`;
+        html += `<div class="rs-item"><span class="rv">${wpm}</span><span class="rl">WPM</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${acc}%</span><span class="rl">Accuracy</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${G.score}</span><span class="rl">Score</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${G.maxCombo}</span><span class="rl">Best Combo</span></div>`;
+        html += `</div>`;
+        html += `<div class="btn-group" style="margin-top:18px;">`;
+        if (passed && !isLastLevel) {
+            html += `<button class="btn btn-success" onclick="nextLevel()">Next Level</button>`;
+        } else if (passed && isLastLevel) {
+            html += `<button class="btn btn-success" onclick="finishAdventure()">See Results</button>`;
+        }
+        html += `<button class="btn btn-secondary" onclick="retryLevel()">Retry</button>`;
+        html += `<button class="btn btn-secondary" onclick="backToMenu()">Menu</button>`;
+        html += `</div>`;
+
+        document.getElementById('level-screen').innerHTML = html;
+        showScreen('level-screen');
+    }
+
+    function showPracticeResult(wpm, acc) {
+        const msg = getPerformanceMsg(wpm, acc, true);
+        let html = `<div class="result-title win">Practice Complete</div>`;
+        html += `<div class="result-msg">${msg}</div>`;
+        html += `<div class="result-stats">`;
+        html += `<div class="rs-item"><span class="rv">${wpm}</span><span class="rl">WPM</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${acc}%</span><span class="rl">Accuracy</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${G.correctChars}</span><span class="rl">Correct</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${G.maxCombo}</span><span class="rl">Best Combo</span></div>`;
+        html += `</div>`;
+        html += `<div class="btn-group" style="margin-top:18px;">`;
+        html += `<button class="btn btn-success" onclick="startGame()">Play Again</button>`;
+        html += `<button class="btn btn-secondary" onclick="backToMenu()">Menu</button>`;
+        html += `</div>`;
+
+        if (wpm > 0) {
+            const pn = GameUtils.playerName.get(1);
+            GameUtils.highScores.add('typingtutor', pn, wpm, { accuracy: acc, mode: 'practice' });
+            GameUtils.stats.update('typingtutor', 'win');
+        }
+
+        document.getElementById('gameover-screen').innerHTML = html;
+        showScreen('gameover-screen');
+        renderHighScores();
+    }
+
+    function showTimeAttackResult(wpm, acc) {
+        const msg = getPerformanceMsg(wpm, acc, true);
+        const score = G.correctChars * 10 + wpm * 5;
+        let html = `<div class="result-title win">Time's Up!</div>`;
+        html += `<div class="result-msg">${msg}</div>`;
+        html += `<div class="result-stats">`;
+        html += `<div class="rs-item"><span class="rv">${wpm}</span><span class="rl">WPM</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${acc}%</span><span class="rl">Accuracy</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${G.correctChars}</span><span class="rl">Characters</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${score}</span><span class="rl">Score</span></div>`;
+        html += `</div>`;
+        html += `<div class="btn-group" style="margin-top:18px;">`;
+        html += `<button class="btn btn-success" onclick="startGame()">Play Again</button>`;
+        html += `<button class="btn btn-secondary" onclick="backToMenu()">Menu</button>`;
+        html += `</div>`;
+
+        const pn = GameUtils.playerName.get(1);
+        GameUtils.highScores.add('typingtutor', pn, score, { wpm, accuracy: acc, mode: 'timeAttack' });
+        GameUtils.stats.update('typingtutor', 'win');
+
+        document.getElementById('gameover-screen').innerHTML = html;
+        showScreen('gameover-screen');
+    }
+
+    function show2PResult() {
+        const p1n = GameUtils.playerName.get(1);
+        const p2n = GameUtils.playerName.get(2);
+        const p1 = G.p1, p2 = G.p2;
+        const p1wins = (p1.wpm > p2.wpm ? 1 : 0) + (p1.acc > p2.acc ? 1 : 0);
+        const p2wins = (p2.wpm > p1.wpm ? 1 : 0) + (p2.acc > p1.acc ? 1 : 0);
+        const winner = p1wins > p2wins ? p1n : p2wins > p1wins ? p2n : 'Tie';
+
+        let html = `<div class="result-title win">${winner === 'Tie' ? "It's a Tie!" : winner + ' Wins!'}</div>`;
+        html += `<div class="vs-row"><div class="vs-col"><div class="pname">${GameUtils.escapeHtml(p1n)}</div><div class="pval">${p1.wpm} WPM</div><div style="color:var(--text-secondary)">${p1.acc}% accuracy</div></div>`;
+        html += `<div class="vs-sep">VS</div>`;
+        html += `<div class="vs-col"><div class="pname">${GameUtils.escapeHtml(p2n)}</div><div class="pval">${p2.wpm} WPM</div><div style="color:var(--text-secondary)">${p2.acc}% accuracy</div></div></div>`;
+        html += `<div class="btn-group" style="margin-top:18px;">`;
+        html += `<button class="btn btn-success" onclick="startGame()">Rematch</button>`;
+        html += `<button class="btn btn-secondary" onclick="backToMenu()">Menu</button>`;
+        html += `</div>`;
+
+        document.getElementById('gameover-screen').innerHTML = html;
+        showScreen('gameover-screen');
+    }
+
+    function finishAdventure() {
+        const wpm = getWPM();
+        const acc = getAcc();
+        const pn = GameUtils.playerName.get(1);
+        GameUtils.highScores.add('typingtutor', pn, G.totalScore, { wpm, accuracy: acc, mode: 'adventure', levelsCleared: G.levelsCleared });
+        GameUtils.stats.update('typingtutor', 'win');
+
+        let html = `<div class="result-title win">Adventure Complete!</div>`;
+        html += `<div class="result-msg">You conquered all 10 levels! Amazing typing skills!</div>`;
+        html += `<div class="result-stats">`;
+        html += `<div class="rs-item"><span class="rv">${G.totalScore}</span><span class="rl">Total Score</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${G.levelsCleared}</span><span class="rl">Levels</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${wpm}</span><span class="rl">Final WPM</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${acc}%</span><span class="rl">Accuracy</span></div>`;
+        html += `</div>`;
+        html += `<div class="btn-group" style="margin-top:18px;">`;
+        html += `<button class="btn btn-success" onclick="startGame()">Play Again</button>`;
+        html += `<button class="btn btn-secondary" onclick="backToMenu()">Menu</button>`;
+        html += `</div>`;
+
+        document.getElementById('gameover-screen').innerHTML = html;
+        showScreen('gameover-screen');
+        renderHighScores();
+    }
+
+    function nextLevel() {
+        G.level++;
+        if (G.level >= LEVELS.length) { finishAdventure(); return; }
+        startRound();
+    }
+
+    function retryLevel() {
+        startRound();
+    }
+
+    function quitGame() {
+        if (G.timerInterval) { clearInterval(G.timerInterval); G.timerInterval = null; }
+        G.screen = 'menu';
+        backToMenu();
+    }
+
+    function backToMenu() {
+        if (G.timerInterval) { clearInterval(G.timerInterval); G.timerInterval = null; }
+        G.screen = 'menu';
+        showScreen('setup-screen');
+        renderHighScores();
+    }
+
+    function getPerformanceMsg(wpm, acc, passed) {
+        if (!passed) return 'Your accuracy was a bit low. Keep practicing and try again!';
+        if (acc === 100 && wpm > 60) return 'LEGENDARY! Perfect accuracy at blazing speed!';
+        if (acc === 100) return 'PERFECT! Not a single mistake!';
+        if (wpm > 80) return 'Incredible speed! Your fingers are on fire!';
+        if (wpm > 60) return 'Great speed! You are a typing pro!';
+        if (wpm > 40) return 'Nice work! Getting faster every day!';
+        if (acc > 95) return 'Super accurate! Almost perfect!';
+        if (acc > 85) return 'Well done! Keep it up!';
+        return 'Good effort! Practice makes perfect!';
+    }
+
+    // ===== UI HELPERS =====
+    function showScreen(id) {
+        ['setup-screen','game-screen','level-screen','gameover-screen'].forEach(s => {
+            document.getElementById(s).style.display = s === id ? '' : 'none';
+        });
+    }
+
+    function getSelected(rowId) {
+        const row = document.getElementById(rowId);
+        const active = row.querySelector('.opt-btn.active');
+        return active ? active.dataset.val : '';
+    }
+
+    function focusInput() {
+        const inp = document.getElementById('hidden-input');
+        inp.focus({ preventScroll: true });
+    }
+
+    function renderHighScores() {
+        GameUtils.renderHighScores('typingtutor', 'high-scores');
+        GameUtils.renderStats('typingtutor', 'game-stats');
+        GameUtils.renderHighScores('typingtutor', 'hs-setup');
+    }
+
+    // ===== INPUT HANDLING =====
+    document.addEventListener('keydown', e => {
+        if (G && G.screen === 'playing') {
+            if (e.key === 'Tab' || e.key === 'Backspace') { e.preventDefault(); return; }
+            if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault();
+                handleInput(e.key);
+            }
+        }
+    });
+
+    // Mobile fallback
+    const hiddenInput = document.getElementById('hidden-input');
+    hiddenInput.addEventListener('input', () => {
+        if (!G || G.screen !== 'playing') return;
+        const v = hiddenInput.value;
+        if (v) {
+            for (const ch of v) handleInput(ch);
+            hiddenInput.value = '';
+        }
+    });
+
+    // Click on text area to focus
+    document.getElementById('text-display').addEventListener('click', focusInput);
+
+    // Setup option buttons
+    document.querySelectorAll('.opt-row').forEach(row => {
+        row.querySelectorAll('.opt-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                row.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+    });
+
+    // ===== MAIN LOOP =====
+    let lastFrameTime = 0;
+
+    function gameLoop(ts) {
+        const dt = Math.min((ts - lastFrameTime) / 1000, 0.1);
+        lastFrameTime = ts;
+
+        if (G && G.screen === 'playing') {
+            // Smooth scroll
+            G.scrollX += (G.targetScroll - G.scrollX) * Math.min(dt * 6, 1);
+
+            // Jump timer
+            if (G.jumpTimer > 0) G.jumpTimer = Math.max(0, G.jumpTimer - dt);
+            if (G.stumbleTimer > 0) G.stumbleTimer = Math.max(0, G.stumbleTimer - dt);
+
+            // Particles
+            updateParticles(dt);
+
+            // Idle dust
+            const moving = performance.now() - G.lastKeyTime < 600;
+            if (moving && Math.random() < 0.3) spawnDust();
+
+            // Draw
+            drawScene();
+        }
+
+        animId = requestAnimationFrame(gameLoop);
+    }
+
+    // ===== INIT =====
+    G = freshState();
+    canvas = document.getElementById('gc');
+    ctx = canvas.getContext('2d');
+    initScene();
+    renderHighScores();
+    drawScene(); // Draw initial scene on setup
+    </script>
+</body>
+</html>
