@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 30 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 31 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
@@ -29,7 +29,8 @@ A collection of 30 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── numbermunchers.html # Math arcade with Troggles
     ├── wordsearch.html     # Word finding puzzle
     ├── artillery.html      # Gorillas-style artillery game
-    └── scrabble.html       # Classic word tile game
+    ├── scrabble.html       # Classic word tile game
+    └── monopoly.html       # Classic property trading board game
 ```
 
 ## Key Features
@@ -178,6 +179,21 @@ A collection of 30 classic games built with vanilla HTML, CSS, and JavaScript. D
 - Game ends when bag empty + player empties hand, or both players pass consecutively
 - End-game scoring: remaining rack tiles subtracted; player who went out gets opponent's remainder
 - 2-player mode with device-passing and hand hiding
+
+### Monopoly
+- Classic property trading board game on a 40-space board
+- Standard US Monopoly properties, prices, and rent values
+- Buy properties when landing on them; pay rent to other owners
+- Build houses (up to 4) and hotels on owned color groups (even building rule)
+- Chance and Community Chest cards with all 16 classic effects each
+- Jail: pay $50, use Get Out of Jail Free card, or try rolling doubles (3 attempts)
+- Mortgage/unmortgage properties through the property manager
+- Doubles: roll again (3 doubles in a row = go to jail)
+- Bankruptcy: sell houses and mortgage to raise funds; bankrupt = eliminated
+- AI difficulty: Easy (random buying), Medium (strategic buying + building), Hard (optimal strategy + prioritizes orange/red groups)
+- Simplified rules: no auctions, no trading between players
+- Score = total wealth (cash + property values) of the winner
+- 2-player mode with same-device play
 
 ## Development
 To test locally:
