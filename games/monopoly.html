@@ -305,6 +305,48 @@
             #board-center h2 { font-size: 1rem; }
             #message { font-size: 0.65rem; }
         }
+        /* Setup screen */
+        .setup-section { margin-bottom: 18px; }
+        .setup-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+        .setup-row-label { font-size: 0.85rem; color: #94a3b8; min-width: 130px; }
+        .setup-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .setup-btns button { padding: 7px 16px; border-radius: 8px; border: 2px solid #475569; background: #1e293b; color: #e2e8f0; cursor: pointer; font-size: 0.82rem; font-weight: 600; transition: all 0.15s; }
+        .setup-btns button:hover { border-color: #94a3b8; }
+        .setup-btns button.active { border-color: #f59e0b; background: #78350f; color: #fef3c7; }
+        .setup-btns button:disabled { opacity: 0.35; cursor: not-allowed; }
+        .setup-name-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+        .setup-name-input { background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: #e2e8f0; padding: 6px 10px; font-size: 0.85rem; width: 180px; }
+        /* Trade modal */
+        #trade-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); z-index: 200; align-items: center; justify-content: center; }
+        #trade-modal.show { display: flex; }
+        .trade-card { background: #1e293b; border-radius: 14px; padding: 20px; max-width: 480px; width: 94%; max-height: 88vh; overflow-y: auto; }
+        .trade-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .trade-col h4 { margin: 0 0 8px; font-size: 0.8rem; color: #94a3b8; }
+        .trade-prop-item { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px; background: #0f172a; margin-bottom: 4px; cursor: pointer; border: 2px solid transparent; font-size: 0.73rem; transition: border-color 0.15s; }
+        .trade-prop-item:hover { border-color: #475569; }
+        .trade-prop-item.selected { border-color: #f59e0b; background: #1c1917; }
+        .trade-prop-color { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+        .trade-cash-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.78rem; color: #94a3b8; }
+        .trade-cash-row input { background: #0f172a; border: 1px solid #475569; border-radius: 6px; color: #e2e8f0; padding: 4px 8px; font-size: 0.78rem; width: 80px; }
+        .trade-summary { background: #0f172a; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.78rem; color: #94a3b8; }
+        .trade-summary span { color: #e2e8f0; }
+        .trade-partner-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .trade-partner-btn { padding: 8px 16px; border-radius: 8px; border: 2px solid #475569; background: #1e293b; color: #e2e8f0; cursor: pointer; font-size: 0.82rem; font-weight: 600; }
+        .trade-partner-btn:hover { border-color: #94a3b8; }
+        /* Bankruptcy modal */
+        #bankruptcy-modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 300; align-items: center; justify-content: center; }
+        #bankruptcy-modal.show { display: flex; }
+        .bk-card { background: #1e293b; border-radius: 14px; padding: 20px; max-width: 400px; width: 94%; max-height: 85vh; overflow-y: auto; border: 2px solid #ef4444; }
+        .bk-card h3 { margin: 0 0 10px; color: #ef4444; }
+        .bk-debt { font-size: 0.85rem; color: #fca5a5; margin-bottom: 14px; }
+        .bk-prop { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; background: #0f172a; border-radius: 6px; margin-bottom: 4px; font-size: 0.75rem; }
+        .bk-prop-name { flex: 1; }
+        .bk-prop-btns { display: flex; gap: 4px; }
+        .bk-btn { padding: 3px 8px; font-size: 0.65rem; border-radius: 4px; border: none; cursor: pointer; font-weight: 600; }
+        .bk-sell-btn { background: #ef4444; color: #fff; }
+        .bk-sell-btn:disabled { background: #475569; cursor: not-allowed; }
+        .bk-mortgage-btn { background: #f59e0b; color: #000; }
+        .bk-mortgage-btn:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -315,16 +357,44 @@
         </div>
 
         <div id="setup" class="game-container">
-            <h3>Select Mode</h3>
-            <div class="mode-selection">
-                <button class="mode-btn" onclick="chooseMode('1p')">1 Player<br><small>vs Computer</small></button>
-                <button class="mode-btn" onclick="chooseMode('2p')">2 Players<br><small>Same Device</small></button>
-            </div>
-            <div id="difficulty-select" class="difficulty-selection" style="display:none; margin-top: 20px;">
-                <h3>AI Difficulty</h3>
-                <button class="difficulty-btn" onclick="startGame('easy')">Easy</button>
-                <button class="difficulty-btn" onclick="startGame('medium')">Medium</button>
-                <button class="difficulty-btn" onclick="startGame('hard')">Hard</button>
+            <h3>Setup Game</h3>
+            <div class="setup-section">
+                <div class="setup-row">
+                    <span class="setup-row-label">Human Players:</span>
+                    <div class="setup-btns" id="human-btns">
+                        <button onclick="setHumans(1)">1</button>
+                        <button onclick="setHumans(2)">2</button>
+                    </div>
+                </div>
+                <div class="setup-row">
+                    <span class="setup-row-label">Computer Players:</span>
+                    <div class="setup-btns" id="ai-btns">
+                        <button onclick="setAI(0)" id="ai-btn-0">0</button>
+                        <button onclick="setAI(1)" id="ai-btn-1">1</button>
+                        <button onclick="setAI(2)" id="ai-btn-2">2</button>
+                        <button onclick="setAI(3)" id="ai-btn-3">3</button>
+                        <button onclick="setAI(4)" id="ai-btn-4">4</button>
+                    </div>
+                </div>
+                <div class="setup-row" id="difficulty-row">
+                    <span class="setup-row-label">AI Difficulty:</span>
+                    <div class="setup-btns" id="diff-btns">
+                        <button onclick="setDiff('easy')">Easy</button>
+                        <button onclick="setDiff('medium')">Medium</button>
+                        <button onclick="setDiff('hard')">Hard</button>
+                    </div>
+                </div>
+                <div class="setup-name-row">
+                    <span class="setup-row-label">Player 1 Name:</span>
+                    <input type="text" class="setup-name-input" id="p1-name-input" maxlength="20">
+                </div>
+                <div class="setup-name-row" id="p2-name-row" style="display:none">
+                    <span class="setup-row-label">Player 2 Name:</span>
+                    <input type="text" class="setup-name-input" id="p2-name-input" maxlength="20">
+                </div>
+                <div style="margin-top: 16px;">
+                    <button class="btn" onclick="startGame()">Start Game</button>
+                </div>
             </div>
         </div>
 
@@ -363,6 +433,20 @@
             <div style="text-align:center; margin-top:12px;">
                 <button class="btn" onclick="closePropManager()">Close</button>
             </div>
+        </div>
+    </div>
+
+    <div id="trade-modal">
+        <div class="trade-card">
+            <h3 style="margin:0 0 12px">Property Trade</h3>
+            <div id="trade-content"></div>
+        </div>
+    </div>
+
+    <div id="bankruptcy-modal">
+        <div class="bk-card">
+            <h3>&#9888; Financial Crisis!</h3>
+            <div id="bk-content"></div>
         </div>
     </div>
 
@@ -500,8 +584,9 @@
         { text: 'You won second prize in a beauty contest! Collect $10.', action: p => { p.money += 10; logMsg(`${p.name} collects $10.`); } },
     ];
 
-    const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b'];
-    const PLAYER_TOKENS = ['1', '2', '3', '4'];
+    const PLAYER_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#ec4899'];
+    const PLAYER_TOKENS = ['1', '2', '3', '4', '5', '6'];
+    const AI_NAMES = ['Computer', 'Robot', 'Skynet', 'HAL 9000'];
 
     // ===================== STATE =====================
     let players = [];
@@ -512,30 +597,94 @@
     let doublesCount = 0;
     let lastDice = [0, 0];
     let phase = 'setup'; // setup, roll, moving, landed, buy-decision, jail-choice, pre-end, end-turn, ai-turn, game-over
-    let mode = '1p';
     let difficulty = 'medium';
     let gameOver = false;
     let awaitingAction = false;
+    let setupConfig = { humanCount: 1, aiCount: 1, difficulty: 'medium' };
+    let tradeState = { open: false, phase: 'select-partner', initiatorIdx: 0, targetIdx: null, offerProps: [], requestProps: [], offerCash: 0, requestCash: 0 };
+    let bankruptcyPlayer = null;
+    let bankruptcyCreditorIdx = null;
+    let bankruptcyResolve = null;
 
     // ===================== SETUP =====================
-    function chooseMode(m) {
-        mode = m;
-        if (m === '1p') {
-            document.getElementById('difficulty-select').style.display = '';
-        } else {
-            startGame('none');
-        }
+    function initSetup() {
+        document.getElementById('p1-name-input').value = GameUtils.playerName.get(1);
+        document.getElementById('p2-name-input').value = GameUtils.playerName.get(2);
+        updateSetupUI();
     }
 
-    function startGame(diff) {
-        difficulty = diff;
-        const p1Name = GameUtils.playerName.get(1);
-        const p2Name = mode === '2p' ? GameUtils.playerName.get(2) : 'Computer';
+    function setHumans(n) {
+        setupConfig.humanCount = n;
+        if (n === 2 && setupConfig.aiCount === 0) {
+            // allowed: 0 AI with 2 humans
+        } else if (n === 1 && setupConfig.aiCount === 0) {
+            setupConfig.aiCount = 1;
+        }
+        updateSetupUI();
+    }
 
-        players = [
-            { name: p1Name, isAI: false, money: 1500, position: 0, properties: [], inJail: false, jailTurns: 0, jailCards: 0, bankrupt: false, color: PLAYER_COLORS[0], token: '1' },
-            { name: p2Name, isAI: mode === '1p', money: 1500, position: 0, properties: [], inJail: false, jailTurns: 0, jailCards: 0, bankrupt: false, color: PLAYER_COLORS[1], token: '2' },
-        ];
+    function setAI(n) {
+        if (n === 0 && setupConfig.humanCount < 2) return; // 0 AI only with 2 humans
+        if (setupConfig.humanCount + n < 2) return; // need at least 2 total
+        if (setupConfig.humanCount + n > 6) return;
+        setupConfig.aiCount = n;
+        updateSetupUI();
+    }
+
+    function setDiff(d) {
+        setupConfig.difficulty = d;
+        updateSetupUI();
+    }
+
+    function updateSetupUI() {
+        const { humanCount, aiCount, difficulty: diff } = setupConfig;
+        // Human buttons
+        document.querySelectorAll('#human-btns button').forEach((btn, i) => {
+            btn.classList.toggle('active', (i + 1) === humanCount);
+        });
+        // AI buttons
+        for (let i = 0; i <= 4; i++) {
+            const btn = document.getElementById('ai-btn-' + i);
+            btn.classList.toggle('active', i === aiCount);
+            // 0 AI only enabled when 2 humans; other counts must keep total >= 2 and <= 6
+            if (i === 0) {
+                btn.disabled = humanCount < 2;
+            } else {
+                btn.disabled = (humanCount + i < 2) || (humanCount + i > 6);
+            }
+        }
+        // Difficulty row
+        const diffRow = document.getElementById('difficulty-row');
+        diffRow.style.display = aiCount > 0 ? '' : 'none';
+        document.querySelectorAll('#diff-btns button').forEach(btn => {
+            btn.classList.toggle('active', btn.textContent.toLowerCase() === diff);
+        });
+        // P2 name row
+        document.getElementById('p2-name-row').style.display = humanCount >= 2 ? '' : 'none';
+    }
+
+    function startGame() {
+        difficulty = setupConfig.difficulty;
+        const { humanCount, aiCount } = setupConfig;
+
+        const p1Name = document.getElementById('p1-name-input').value.trim() || GameUtils.playerName.get(1);
+        const p2Name = humanCount >= 2 ? (document.getElementById('p2-name-input').value.trim() || GameUtils.playerName.get(2)) : '';
+
+        players = [];
+        let colorIdx = 0;
+        // Add human players
+        players.push({ name: p1Name, isAI: false, money: 1500, position: 0, properties: [], inJail: false, jailTurns: 0, jailCards: 0, bankrupt: false, color: PLAYER_COLORS[colorIdx], token: PLAYER_TOKENS[colorIdx] });
+        colorIdx++;
+        if (humanCount >= 2) {
+            players.push({ name: p2Name, isAI: false, money: 1500, position: 0, properties: [], inJail: false, jailTurns: 0, jailCards: 0, bankrupt: false, color: PLAYER_COLORS[colorIdx], token: PLAYER_TOKENS[colorIdx] });
+            colorIdx++;
+        }
+        // Add AI players
+        for (let i = 0; i < aiCount; i++) {
+            const aiName = AI_NAMES[i] || ('Computer ' + (i + 1));
+            players.push({ name: aiName, isAI: true, money: 1500, position: 0, properties: [], inJail: false, jailTurns: 0, jailCards: 0, bankrupt: false, color: PLAYER_COLORS[colorIdx], token: PLAYER_TOKENS[colorIdx] });
+            colorIdx++;
+        }
 
         boardState = SPACES.map(() => ({ owner: null, houses: 0, mortgaged: false }));
         chanceDeck = shuffle([...Array(CHANCE_CARDS.length).keys()]);
@@ -543,6 +692,7 @@
         doublesCount = 0;
         currentPlayerIdx = 0;
         gameOver = false;
+        tradeState = { open: false, phase: 'select-partner', initiatorIdx: 0, targetIdx: null, offerProps: [], requestProps: [], offerCash: 0, requestCash: 0 };
 
         document.getElementById('setup').style.display = 'none';
         document.getElementById('game').style.display = 'block';
@@ -723,7 +873,11 @@
 
         if (gameOver) {
             const winner = players.find(p => !p.bankrupt);
-            turnInfo.innerHTML = `<span style="color:${winner.color}">${GameUtils.escapeHtml(winner.name)} wins!</span>`;
+            if (winner) {
+                turnInfo.innerHTML = `<span style="color:${winner.color}">${GameUtils.escapeHtml(winner.name)} wins!</span>`;
+            } else {
+                turnInfo.innerHTML = `<span>Game Over!</span>`;
+            }
             msg.textContent = 'Game Over!';
             btns.innerHTML = '<button class="btn" onclick="resetGame()">New Game</button>';
             actions.innerHTML = '';
@@ -733,6 +887,8 @@
         btns.innerHTML = '';
         actions.innerHTML = '';
         msg.textContent = '';
+
+        const canTrade = !cp.isAI && players.some((p, i) => i !== currentPlayerIdx && !p.bankrupt);
 
         if (phase === 'roll') {
             if (cp.inJail) {
@@ -744,9 +900,10 @@
             } else {
                 btns.innerHTML = '<button class="btn" onclick="doRoll()">Roll Dice</button>';
             }
-            if (cp.properties.length > 0) {
-                actions.innerHTML = '<button class="btn btn-secondary" onclick="openPropManager()">Manage Properties</button>';
-            }
+            let actionHtml = '';
+            if (cp.properties.length > 0) actionHtml += '<button class="btn btn-secondary" onclick="openPropManager()">Manage Properties</button>';
+            if (canTrade) actionHtml += '<button class="btn btn-secondary" onclick="openTradeModal()">Trade</button>';
+            actions.innerHTML = actionHtml;
         } else if (phase === 'buy-decision') {
             const sp = SPACES[cp.position];
             msg.textContent = `${sp.name} is available for $${sp.price}`;
@@ -761,9 +918,10 @@
             } else {
                 btns.innerHTML = '<button class="btn" onclick="doEndTurn()">End Turn</button>';
             }
-            if (cp.properties.length > 0) {
-                actions.innerHTML = '<button class="btn btn-secondary" onclick="openPropManager()">Manage Properties</button>';
-            }
+            let actionHtml = '';
+            if (cp.properties.length > 0) actionHtml += '<button class="btn btn-secondary" onclick="openPropManager()">Manage Properties</button>';
+            if (canTrade) actionHtml += '<button class="btn btn-secondary" onclick="openTradeModal()">Trade</button>';
+            actions.innerHTML = actionHtml;
         }
     }
 
@@ -901,6 +1059,7 @@
 
     function finishAction(player) {
         if (gameOver) return;
+        if (player.bankrupt) { nextPlayer(); return; }
         if (player.money < 0) return; // bankruptcy handled elsewhere
         phase = doublesCount > 0 && !player.inJail ? 'pre-end' : 'end-turn';
         showPhaseUI();
@@ -1167,43 +1326,146 @@
 
     // ===================== BANKRUPTCY =====================
     async function handleBankruptcy(player, creditorIdx) {
-        const pi = players.indexOf(player);
-        // Try to raise funds by selling houses and mortgaging
         if (player.isAI) {
             aiRaiseFunds(player);
+        } else {
+            // Human player: show modal to raise funds
+            if (player.money < 0) {
+                await showBankruptcyModal(player, creditorIdx);
+            }
         }
 
         if (player.money < 0) {
-            player.bankrupt = true;
-            logMsg(`${player.name} is bankrupt!`);
+            declareBankruptPlayer(player, creditorIdx);
+            checkGameOver();
+        }
+    }
 
+    function declareBankruptPlayer(player, creditorIdx) {
+        player.bankrupt = true;
+        logMsg(`${player.name} is bankrupt!`);
+
+        if (creditorIdx !== null && creditorIdx !== undefined) {
+            // Transfer properties and any remaining cash to creditor
+            const creditor = players[creditorIdx];
+            for (const si of player.properties) {
+                boardState[si].owner = creditorIdx;
+                boardState[si].houses = 0; // clear houses (houses lost on bankruptcy)
+                creditor.properties.push(si);
+            }
+            if (player.money > 0) creditor.money += player.money;
+        } else {
             // Return all properties to bank
             for (const si of player.properties) {
                 boardState[si].owner = null;
                 boardState[si].houses = 0;
                 boardState[si].mortgaged = false;
             }
-            player.properties = [];
-            updateAll();
+        }
+        player.properties = [];
+        player.money = 0;
+        updateAll();
+    }
 
-            // Check game end
-            const alive = players.filter(p => !p.bankrupt);
-            if (alive.length <= 1) {
-                gameOver = true;
-                const winner = alive[0];
-                logMsg(`${winner.name} wins the game!`);
+    function checkGameOver() {
+        const alive = players.filter(p => !p.bankrupt);
+        if (alive.length <= 1) {
+            gameOver = true;
+            const winner = alive[0];
+            logMsg(`${winner ? winner.name : 'Nobody'} wins the game!`);
+            if (winner) {
                 const totalWealth = winner.money + winner.properties.reduce((sum, i) => {
                     let val = SPACES[i].price + boardState[i].houses * (SPACES[i].houseCost || 0);
                     return sum + val;
                 }, 0);
-                GameUtils.stats.update('monopoly', pi === 0 ? 'loss' : 'win');
+                const firstHuman = players.find(p => !p.isAI);
+                if (firstHuman) GameUtils.stats.update('monopoly', winner === firstHuman ? 'win' : 'loss');
                 GameUtils.highScores.add('monopoly', winner.name, totalWealth, { difficulty });
-                GameUtils.renderStats('monopoly', 'stats');
-                GameUtils.renderHighScores('monopoly', 'high-scores');
-                phase = 'game-over';
-                showPhaseUI();
+            }
+            GameUtils.renderStats('monopoly', 'stats');
+            GameUtils.renderHighScores('monopoly', 'high-scores');
+            phase = 'game-over';
+            showPhaseUI();
+        }
+    }
+
+    function showBankruptcyModal(player, creditorIdx) {
+        return new Promise(resolve => {
+            bankruptcyPlayer = player;
+            bankruptcyCreditorIdx = creditorIdx;
+            bankruptcyResolve = resolve;
+            renderBankruptcyModal(player, creditorIdx);
+            document.getElementById('bankruptcy-modal').classList.add('show');
+        });
+    }
+
+    function renderBankruptcyModal(player, creditorIdx) {
+        const pi = players.indexOf(player);
+        const debt = -player.money;
+        let html = `<div class="bk-debt">You owe $${debt.toLocaleString()}${creditorIdx !== null && creditorIdx !== undefined ? ' to ' + GameUtils.escapeHtml(players[creditorIdx].name) : ' to the bank'}. Raise funds or declare bankruptcy.</div>`;
+
+        // List properties with sell-house and mortgage actions
+        const groups = {};
+        for (const si of player.properties) {
+            const sp = SPACES[si];
+            const g = sp.group || 'other';
+            if (!groups[g]) groups[g] = [];
+            groups[g].push(si);
+        }
+
+        for (const [group, indices] of Object.entries(groups)) {
+            const color = GROUP_COLORS[group] || '#666';
+            const name = GROUP_NAMES[group] || group;
+            html += `<div style="font-size:0.75rem;font-weight:600;color:#94a3b8;margin:8px 0 4px;display:flex;align-items:center;gap:6px"><div style="width:10px;height:10px;border-radius:2px;background:${color};display:inline-block"></div>${name}</div>`;
+            for (const si of indices) {
+                const sp = SPACES[si];
+                const bs = boardState[si];
+                const canSell = bs.houses > 0 && canSellHouseOn(si);
+                const canMort = !bs.mortgaged && bs.houses === 0;
+                html += `<div class="bk-prop">
+                    <span class="bk-prop-name">${sp.name}${bs.mortgaged ? ' (M)' : bs.houses > 0 ? ' (' + (bs.houses === 5 ? 'H' : bs.houses + ' houses') + ')' : ''}</span>
+                    <div class="bk-prop-btns">
+                        ${canSell ? `<button class="bk-btn bk-sell-btn" onclick="bkSellHouse(${si})">Sell House $${Math.floor(sp.houseCost/2)}</button>` : ''}
+                        ${canMort ? `<button class="bk-btn bk-mortgage-btn" onclick="bkMortgage(${si})">Mortgage $${Math.floor(sp.price/2)}</button>` : ''}
+                    </div>
+                </div>`;
             }
         }
+
+        html += `<div style="text-align:center;margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button class="btn" onclick="bkClose()" ${player.money >= 0 ? '' : 'style="opacity:0.5"'}>Done (Cash: $${player.money.toLocaleString()})</button>
+            <button class="btn" style="background:#ef4444;border-color:#ef4444" onclick="bkDeclareBankruptcy()">Declare Bankruptcy</button>
+        </div>`;
+
+        document.getElementById('bk-content').innerHTML = html;
+    }
+
+    function bkSellHouse(si) {
+        if (!bankruptcyPlayer) return;
+        sellHouse(si);
+        renderBankruptcyModal(bankruptcyPlayer, bankruptcyCreditorIdx);
+    }
+
+    function bkMortgage(si) {
+        if (!bankruptcyPlayer) return;
+        mortgageProperty(si);
+        renderBankruptcyModal(bankruptcyPlayer, bankruptcyCreditorIdx);
+    }
+
+    function bkClose() {
+        if (!bankruptcyPlayer) return;
+        document.getElementById('bankruptcy-modal').classList.remove('show');
+        const resolve = bankruptcyResolve;
+        bankruptcyPlayer = null;
+        bankruptcyCreditorIdx = null;
+        bankruptcyResolve = null;
+        if (resolve) resolve();
+    }
+
+    function bkDeclareBankruptcy() {
+        if (!bankruptcyPlayer) return;
+        bankruptcyPlayer.money = Math.min(bankruptcyPlayer.money, -1); // ensure negative for declaration
+        bkClose();
     }
 
     // ===================== AI =====================
@@ -1357,6 +1619,267 @@
             }
             break; // Nothing left to sell/mortgage
         }
+    }
+
+    // ===================== TRADE =====================
+    function openTradeModal() {
+        const cp = players[currentPlayerIdx];
+        tradeState = {
+            open: true,
+            phase: 'select-partner',
+            initiatorIdx: currentPlayerIdx,
+            targetIdx: null,
+            offerProps: [],
+            requestProps: [],
+            offerCash: 0,
+            requestCash: 0
+        };
+        renderTradeModal();
+        document.getElementById('trade-modal').classList.add('show');
+    }
+
+    function closeTradeModal() {
+        document.getElementById('trade-modal').classList.remove('show');
+        tradeState.open = false;
+    }
+
+    function renderTradeModal() {
+        const content = document.getElementById('trade-content');
+        const initiator = players[tradeState.initiatorIdx];
+
+        if (tradeState.phase === 'select-partner') {
+            const partners = players.filter((p, i) => i !== tradeState.initiatorIdx && !p.bankrupt);
+            let html = `<p style="font-size:0.82rem;color:#94a3b8;margin:0 0 10px">Select a player to trade with:</p>`;
+            html += `<div class="trade-partner-btns">`;
+            for (const p of partners) {
+                const pi = players.indexOf(p);
+                html += `<button class="trade-partner-btn" style="border-color:${p.color}" onclick="tradeSelectPartner(${pi})">
+                    <span style="color:${p.color}">${GameUtils.escapeHtml(p.name)}</span><br>
+                    <small style="color:#94a3b8">$${p.money.toLocaleString()} &bull; ${p.properties.length} props</small>
+                </button>`;
+            }
+            html += `</div>`;
+            html += `<div style="text-align:right;margin-top:12px"><button class="btn btn-secondary" onclick="closeTradeModal()">Cancel</button></div>`;
+            content.innerHTML = html;
+            return;
+        }
+
+        if (tradeState.phase === 'review') {
+            // AI or human review phase
+            renderTradeReview(content);
+            return;
+        }
+
+        if (tradeState.phase === 'pass-device') {
+            renderTradePassDevice(content);
+            return;
+        }
+
+        // Main trade setup phase
+        const target = players[tradeState.targetIdx];
+        let html = `<div style="font-size:0.8rem;color:#94a3b8;margin-bottom:10px">
+            <span style="color:${initiator.color}">${GameUtils.escapeHtml(initiator.name)}</span> trades with <span style="color:${target.color}">${GameUtils.escapeHtml(target.name)}</span>
+        </div>`;
+
+        html += `<div class="trade-columns">`;
+
+        // Offer column (initiator's properties)
+        html += `<div class="trade-col"><h4>You Offer (${GameUtils.escapeHtml(initiator.name)})</h4>`;
+        if (initiator.properties.length === 0) {
+            html += `<p style="font-size:0.72rem;color:#64748b">No properties</p>`;
+        }
+        for (const si of initiator.properties) {
+            const sp = SPACES[si];
+            const color = sp.group ? GROUP_COLORS[sp.group] : '#666';
+            const sel = tradeState.offerProps.includes(si) ? ' selected' : '';
+            html += `<div class="trade-prop-item${sel}" onclick="tradeToggleProp('offer',${si})">
+                <div class="trade-prop-color" style="background:${color}"></div>
+                <span>${sp.short}</span>
+            </div>`;
+        }
+        html += `<div class="trade-cash-row"><label>Cash: $<input type="number" min="0" max="${initiator.money}" value="${tradeState.offerCash}" id="offer-cash" onchange="tradeState.offerCash=Math.max(0,Math.min(${initiator.money},+this.value));renderTradeModal()"></label></div>`;
+        html += `</div>`;
+
+        // Request column (target's properties)
+        html += `<div class="trade-col"><h4>You Request (${GameUtils.escapeHtml(target.name)})</h4>`;
+        if (target.properties.length === 0) {
+            html += `<p style="font-size:0.72rem;color:#64748b">No properties</p>`;
+        }
+        for (const si of target.properties) {
+            const sp = SPACES[si];
+            const color = sp.group ? GROUP_COLORS[sp.group] : '#666';
+            const sel = tradeState.requestProps.includes(si) ? ' selected' : '';
+            html += `<div class="trade-prop-item${sel}" onclick="tradeToggleProp('request',${si})">
+                <div class="trade-prop-color" style="background:${color}"></div>
+                <span>${sp.short}</span>
+            </div>`;
+        }
+        html += `<div class="trade-cash-row"><label>Cash: $<input type="number" min="0" max="${target.money}" value="${tradeState.requestCash}" id="request-cash" onchange="tradeState.requestCash=Math.max(0,Math.min(${target.money},+this.value));renderTradeModal()"></label></div>`;
+        html += `</div>`;
+
+        html += `</div>`; // end trade-columns
+
+        // Summary
+        const offerVal = tradeState.offerCash + tradeState.offerProps.reduce((s, i) => s + SPACES[i].price, 0);
+        const reqVal = tradeState.requestCash + tradeState.requestProps.reduce((s, i) => s + SPACES[i].price, 0);
+        html += `<div class="trade-summary">Offer value: <span>$${offerVal.toLocaleString()}</span> &bull; Request value: <span>$${reqVal.toLocaleString()}</span></div>`;
+
+        const hasContent = tradeState.offerProps.length > 0 || tradeState.requestProps.length > 0 || tradeState.offerCash > 0 || tradeState.requestCash > 0;
+        html += `<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button class="btn" onclick="submitTrade()" ${!hasContent ? 'disabled' : ''}>Propose Trade</button>
+            <button class="btn btn-secondary" onclick="closeTradeModal()">Cancel</button>
+        </div>`;
+
+        content.innerHTML = html;
+    }
+
+    function renderTradeReview(content) {
+        const initiator = players[tradeState.initiatorIdx];
+        const target = players[tradeState.targetIdx];
+        const offerVal = tradeState.offerCash + tradeState.offerProps.reduce((s, i) => s + SPACES[i].price, 0);
+        const reqVal = tradeState.requestCash + tradeState.requestProps.reduce((s, i) => s + SPACES[i].price, 0);
+
+        let html = `<p style="font-size:0.82rem;color:#94a3b8;margin:0 0 10px">
+            <span style="color:${initiator.color}">${GameUtils.escapeHtml(initiator.name)}</span> proposes:
+        </p>`;
+
+        if (tradeState.offerProps.length > 0) {
+            html += `<p style="font-size:0.75rem;margin:4px 0">Offers: ${tradeState.offerProps.map(i => SPACES[i].short).join(', ')}`;
+            if (tradeState.offerCash > 0) html += ` + $${tradeState.offerCash}`;
+            html += `</p>`;
+        } else if (tradeState.offerCash > 0) {
+            html += `<p style="font-size:0.75rem;margin:4px 0">Offers: $${tradeState.offerCash}</p>`;
+        }
+        if (tradeState.requestProps.length > 0) {
+            html += `<p style="font-size:0.75rem;margin:4px 0">In exchange for: ${tradeState.requestProps.map(i => SPACES[i].short).join(', ')}`;
+            if (tradeState.requestCash > 0) html += ` + $${tradeState.requestCash}`;
+            html += `</p>`;
+        } else if (tradeState.requestCash > 0) {
+            html += `<p style="font-size:0.75rem;margin:4px 0">In exchange for: $${tradeState.requestCash}</p>`;
+        }
+
+        html += `<div class="trade-summary">Offer value: <span>$${offerVal}</span> &bull; Request value: <span>$${reqVal}</span></div>`;
+        html += `<p style="font-size:0.8rem;color:${target.color};margin:10px 0 6px">${GameUtils.escapeHtml(target.name)}'s decision:</p>`;
+        html += `<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-success" onclick="tradeAccept()">Accept</button>
+            <button class="btn" style="background:#ef4444;border-color:#ef4444" onclick="tradeReject()">Reject</button>
+        </div>`;
+
+        content.innerHTML = html;
+    }
+
+    function renderTradePassDevice(content) {
+        const target = players[tradeState.targetIdx];
+        content.innerHTML = `<div style="text-align:center;padding:20px">
+            <p style="font-size:1rem;margin-bottom:8px">Pass device to</p>
+            <p style="font-size:1.2rem;font-weight:700;color:${target.color}">${GameUtils.escapeHtml(target.name)}</p>
+            <p style="font-size:0.78rem;color:#94a3b8;margin-bottom:16px">to review the trade proposal.</p>
+            <button class="btn" onclick="tradeShowReview()">Ready</button>
+        </div>`;
+    }
+
+    function tradeSelectPartner(idx) {
+        tradeState.targetIdx = idx;
+        tradeState.phase = 'setup';
+        renderTradeModal();
+    }
+
+    function tradeToggleProp(side, si) {
+        if (side === 'offer') {
+            const idx = tradeState.offerProps.indexOf(si);
+            if (idx >= 0) tradeState.offerProps.splice(idx, 1);
+            else tradeState.offerProps.push(si);
+        } else {
+            const idx = tradeState.requestProps.indexOf(si);
+            if (idx >= 0) tradeState.requestProps.splice(idx, 1);
+            else tradeState.requestProps.push(si);
+        }
+        renderTradeModal();
+    }
+
+    function submitTrade() {
+        const target = players[tradeState.targetIdx];
+        if (target.isAI) {
+            // AI auto-evaluates
+            const accepted = aiEvaluateTrade();
+            if (accepted) {
+                executeTrade();
+                GameUtils.showModal('Trade', `${target.name} accepted the trade!`, [{ text: 'OK', onclick: () => {} }]);
+            } else {
+                GameUtils.showModal('Trade', `${target.name} rejected the trade.`, [{ text: 'OK', onclick: () => {} }]);
+                closeTradeModal();
+            }
+        } else {
+            // Human: pass device flow
+            tradeState.phase = 'pass-device';
+            renderTradeModal();
+        }
+    }
+
+    function tradeShowReview() {
+        tradeState.phase = 'review';
+        renderTradeModal();
+    }
+
+    function tradeAccept() {
+        executeTrade();
+        closeTradeModal();
+        updateAll();
+        logMsg('Trade completed!');
+    }
+
+    function tradeReject() {
+        closeTradeModal();
+        logMsg(`${players[tradeState.targetIdx] ? players[tradeState.targetIdx].name : 'Player'} rejected the trade.`);
+    }
+
+    function executeTrade() {
+        const initiatorIdx = tradeState.initiatorIdx;
+        const targetIdx = tradeState.targetIdx;
+        const initiator = players[initiatorIdx];
+        const target = players[targetIdx];
+
+        // Transfer properties from initiator to target
+        for (const si of tradeState.offerProps) {
+            boardState[si].owner = targetIdx;
+            initiator.properties = initiator.properties.filter(i => i !== si);
+            target.properties.push(si);
+        }
+        // Transfer properties from target to initiator
+        for (const si of tradeState.requestProps) {
+            boardState[si].owner = initiatorIdx;
+            target.properties = target.properties.filter(i => i !== si);
+            initiator.properties.push(si);
+        }
+        // Cash
+        initiator.money -= tradeState.offerCash;
+        target.money += tradeState.offerCash;
+        target.money -= tradeState.requestCash;
+        initiator.money += tradeState.requestCash;
+
+        updateAll();
+    }
+
+    function aiEvaluateTrade() {
+        let offerValue = tradeState.offerCash;
+        for (const si of tradeState.offerProps) {
+            offerValue += SPACES[si].price + boardState[si].houses * (SPACES[si].houseCost || 0);
+        }
+        let requestValue = tradeState.requestCash;
+        for (const si of tradeState.requestProps) {
+            requestValue += SPACES[si].price + boardState[si].houses * (SPACES[si].houseCost || 0);
+        }
+        // Bonus for completing a group
+        const ti = tradeState.targetIdx;
+        for (const si of tradeState.offerProps) {
+            if (SPACES[si].type === 'property') {
+                const groupSpaces = getGroupSpaces(SPACES[si].group);
+                const aiOwned = groupSpaces.filter(i => boardState[i].owner === ti).length;
+                if (aiOwned + 1 >= groupSpaces.length) offerValue += SPACES[si].price;
+            }
+        }
+        const tolerance = difficulty === 'easy' ? 0.7 : difficulty === 'medium' ? 0.9 : 1.0;
+        return offerValue >= requestValue * tolerance;
     }
 
     // ===================== PROPERTY MANAGER =====================
@@ -1517,14 +2040,20 @@
     function resetGame() {
         document.getElementById('game').style.display = 'none';
         document.getElementById('setup').style.display = '';
-        document.getElementById('difficulty-select').style.display = 'none';
         phase = 'setup';
         gameOver = false;
+        initSetup();
     }
 
-    // Init stats display
+    // Close trade modal on background click
+    document.getElementById('trade-modal').addEventListener('click', e => {
+        if (e.target.id === 'trade-modal') closeTradeModal();
+    });
+
+    // Init stats display and setup UI
     GameUtils.renderStats('monopoly', 'stats');
     GameUtils.renderHighScores('monopoly', 'high-scores');
+    initSetup();
     </script>
 </body>
 </html>
