@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 31 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 32 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
@@ -30,7 +30,8 @@ A collection of 31 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── wordsearch.html     # Word finding puzzle
     ├── artillery.html      # Gorillas-style artillery game
     ├── scrabble.html       # Classic word tile game
-    └── monopoly.html       # Classic property trading board game
+    ├── monopoly.html       # Classic property trading board game
+    └── zoombini.html       # Allergic Cliffs logic/deduction puzzle
 ```
 
 ## Key Features
@@ -179,6 +180,21 @@ A collection of 31 classic games built with vanilla HTML, CSS, and JavaScript. D
 - Game ends when bag empty + player empties hand, or both players pass consecutively
 - End-game scoring: remaining rack tiles subtracted; player who went out gets opponent's remainder
 - 2-player mode with device-passing and hand hiding
+
+### Zoombini
+- Inspired by Logical Journey of the Zoombinis (1996) "Allergic Cliffs" puzzle
+- Logic/deduction math game: each cliff is allergic to one feature value (hair, eyes, nose, or feet)
+- Send each Zoombini to the bridge that won't sneeze them off; deduce allergies through trial
+- Each Zoombini is rendered as a custom SVG with combinable hair/eyes/nose/feet variants
+- Difficulty levels:
+  - Easy: 2 features (hair, feet) × 3 options each, 8 Zoombinis, 6 mistakes allowed
+  - Medium: 3 features (hair, eyes, feet) × 3 options, 12 Zoombinis, 5 mistakes
+  - Hard: 4 features × 4 options, 16 Zoombinis, 4 mistakes
+- Generation guarantees no Zoombini has both cliff allergies (every Zoombini can cross at least one bridge)
+- Scoring: 100 × difficulty multiplier per crossing; mistake-budget bonus on win (200 × mult per unused mistake)
+- Hint button: spend 50 × mult points to reveal which feature one cliff is allergic to (not the value)
+- Crossed Zoombinis appear shrunken atop their cliff; sneezed Zoombinis bounce back with "AH-CHOO!" effect
+- Game ends on full crossing (win) or mistake budget exhausted (loss); reveal screen shows allergies
 
 ### Monopoly
 - Classic property trading board game on a 40-space board

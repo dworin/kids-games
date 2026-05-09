@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zoombini - Allergic Cliffs - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        :root {
+            --sky: linear-gradient(180deg, #1e3a8a 0%, #4338ca 40%, #7c3aed 70%, #db2777 100%);
+            --cliff-stone: #475569;
+            --cliff-stone-light: #64748b;
+        }
+
+        .scene {
+            position: relative;
+            max-width: 760px;
+            margin: 0 auto;
+            background: var(--sky);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            margin: 10px auto 14px;
+            max-width: 760px;
+            flex-wrap: wrap;
+        }
+        .info-box {
+            padding: 8px 14px;
+            border-radius: 10px;
+            background: var(--card-bg);
+            text-align: center;
+            min-width: 80px;
+        }
+        .info-box .label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .info-box .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .info-box.mistakes .value { color: var(--danger-color); }
+
+        .cliffs-area {
+            position: relative;
+            height: 280px;
+            padding-top: 18px;
+        }
+
+        .stars {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0.7;
+        }
+        .star.big { width: 3px; height: 3px; }
+
+        .cliff-pair {
+            display: grid;
+            grid-template-columns: 1fr 80px 1fr;
+            align-items: end;
+            height: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        .cliff {
+            height: 200px;
+            background:
+                linear-gradient(180deg, var(--cliff-stone-light) 0%, var(--cliff-stone) 60%, #334155 100%);
+            position: relative;
+            cursor: pointer;
+            transition: filter 0.15s;
+        }
+        .cliff.left {
+            border-radius: 0 24px 0 0;
+            box-shadow: inset -4px 0 8px rgba(0,0,0,0.4);
+        }
+        .cliff.right {
+            border-radius: 24px 0 0 0;
+            box-shadow: inset 4px 0 8px rgba(0,0,0,0.4);
+        }
+        .cliff.targetable:hover {
+            filter: brightness(1.15);
+        }
+        .cliff.targetable::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 3px dashed rgba(252, 211, 77, 0.7);
+            border-radius: inherit;
+            pointer-events: none;
+            animation: dashPulse 1.2s ease-in-out infinite;
+        }
+        @keyframes dashPulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        .cliff-label {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.7);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+        }
+
+        .gap {
+            position: relative;
+            height: 200px;
+        }
+        .gap::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at top, transparent 0%, rgba(0,0,0,0.4) 100%);
+        }
+
+        .crossed-zone {
+            position: absolute;
+            top: 26px;
+            left: 8px;
+            right: 8px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 3;
+        }
+        .crossed-side {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            max-width: 45%;
+            justify-content: center;
+            align-content: flex-start;
+            min-height: 40px;
+        }
+        .crossed-side .zoombini { width: 36px; height: 50px; }
+
+        .queue-area {
+            background: linear-gradient(180deg, #064e3b 0%, #022c22 100%);
+            padding: 16px;
+            min-height: 130px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            border-top: 4px solid #166534;
+        }
+
+        .zoombini-slot {
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.15s;
+        }
+        .zoombini-slot:hover { transform: translateY(-4px); }
+        .zoombini-slot.selected {
+            transform: translateY(-8px);
+        }
+        .zoombini-slot.selected::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 32px;
+            height: 6px;
+            background: radial-gradient(ellipse, #fde047 0%, transparent 70%);
+        }
+
+        .zoombini {
+            width: 60px;
+            height: 84px;
+            display: block;
+        }
+
+        .zoombini.crossing {
+            animation: crossOver 0.9s ease-out forwards;
+        }
+        @keyframes crossOver {
+            0% { transform: translate(0, 0); }
+            50% { transform: translate(var(--dx, 0), -120px) scale(1.05); }
+            100% { transform: translate(var(--dx, 0), -160px) scale(0.6); opacity: 0; }
+        }
+        .zoombini.sneezed {
+            animation: sneeze 0.8s ease-out forwards;
+        }
+        @keyframes sneeze {
+            0% { transform: translate(0, 0) rotate(0); }
+            30% { transform: translate(var(--dx, 0), -90px) rotate(15deg); }
+            60% { transform: translate(calc(var(--dx, 0) * 0.4), -40px) rotate(-25deg); }
+            100% { transform: translate(0, 0) rotate(0); }
+        }
+
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 16px auto;
+            flex-wrap: wrap;
+        }
+
+        .message-banner {
+            text-align: center;
+            padding: 10px 16px;
+            margin: 10px auto;
+            max-width: 760px;
+            border-radius: 10px;
+            background: var(--card-bg);
+            font-weight: 600;
+            min-height: 24px;
+        }
+        .message-banner.success { background: linear-gradient(135deg, #047857, #065f46); }
+        .message-banner.error { background: linear-gradient(135deg, #b91c1c, #7f1d1d); }
+        .message-banner.hint { background: linear-gradient(135deg, #1d4ed8, #1e3a8a); }
+
+        .difficulty-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .diff-btn {
+            padding: 14px 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .diff-btn:hover, .diff-btn.selected {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+        }
+        .diff-btn .diff-name { font-weight: 700; font-size: 1.05rem; }
+        .diff-btn .diff-detail { font-size: 0.75rem; opacity: 0.85; margin-top: 3px; }
+
+        .legend {
+            background: var(--card-bg);
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin: 14px 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+        .legend strong { color: var(--text-primary); }
+
+        .sneeze-fx {
+            position: absolute;
+            font-size: 2rem;
+            font-weight: 800;
+            color: #fde047;
+            text-shadow: 2px 2px 0 #b45309;
+            pointer-events: none;
+            animation: sneezePop 0.7s ease-out forwards;
+            z-index: 5;
+        }
+        @keyframes sneezePop {
+            0% { opacity: 0; transform: translate(-50%, 0) scale(0.4); }
+            30% { opacity: 1; transform: translate(-50%, -20px) scale(1.3); }
+            100% { opacity: 0; transform: translate(-50%, -60px) scale(1); }
+        }
+
+        #game-over-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        #game-over-overlay.active { display: flex; }
+        .game-over-box {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 28px;
+            text-align: center;
+            max-width: 380px;
+            width: 90%;
+        }
+        .final-score { font-size: 2.4rem; font-weight: 700; color: var(--primary-color); margin: 10px 0; }
+        .game-over-box .btn { margin: 5px; }
+        .reveal-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 14px 0;
+            gap: 10px;
+        }
+        .reveal-block {
+            background: var(--dark-bg);
+            padding: 8px;
+            border-radius: 8px;
+            flex: 1;
+        }
+        .reveal-block .reveal-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .reveal-block svg { width: 50px; height: 70px; }
+
+        @media (max-width: 600px) {
+            .cliff-pair { grid-template-columns: 1fr 50px 1fr; }
+            .zoombini { width: 50px; height: 70px; }
+            .crossed-side .zoombini { width: 28px; height: 40px; }
+            .cliff-label { font-size: 0.8rem; padding: 3px 8px; }
+            .info-box { min-width: 60px; padding: 6px 10px; }
+            .info-box .value { font-size: 1.05rem; }
+            .difficulty-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <button class="back-btn" onclick="GameUtils.goToLauncher()">Back</button>
+        <h1>Zoombini</h1>
+    </header>
+
+    <div class="container">
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="game-container">
+            <h2 style="text-align:center; margin-bottom:16px;">Allergic Cliffs</h2>
+
+            <div class="legend">
+                <strong>Help the Zoombinis cross the bridges!</strong> Each cliff is allergic to one feature
+                (a specific hair, eyes, nose, or feet style). Sneezed Zoombinis bounce back &mdash; use
+                logic to figure out each cliff's allergy from how it reacts. Send every Zoombini across
+                before you run out of mistakes!
+            </div>
+
+            <div class="form-group">
+                <label>Difficulty</label>
+                <div class="difficulty-grid">
+                    <button class="diff-btn" data-diff="easy" onclick="setDifficulty('easy')">
+                        <div class="diff-name">Easy</div>
+                        <div class="diff-detail">2 features &middot; 8 Zoombinis &middot; 6 mistakes</div>
+                    </button>
+                    <button class="diff-btn selected" data-diff="medium" onclick="setDifficulty('medium')">
+                        <div class="diff-name">Medium</div>
+                        <div class="diff-detail">3 features &middot; 12 Zoombinis &middot; 5 mistakes</div>
+                    </button>
+                    <button class="diff-btn" data-diff="hard" onclick="setDifficulty('hard')">
+                        <div class="diff-name">Hard</div>
+                        <div class="diff-detail">4 features &middot; 16 Zoombinis &middot; 4 mistakes</div>
+                    </button>
+                </div>
+            </div>
+
+            <div style="text-align:center; margin-top:20px;">
+                <button class="btn btn-primary" onclick="startGame()" style="font-size:1.1rem; padding:12px 32px;">Start Adventure</button>
+            </div>
+
+            <div id="hi-scores" style="margin-top:20px;"></div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" style="display:none;">
+            <div class="info-row">
+                <div class="info-box"><div class="label">Crossed</div><div class="value"><span id="crossed">0</span>/<span id="total">12</span></div></div>
+                <div class="info-box mistakes"><div class="label">Mistakes</div><div class="value"><span id="mistakes">0</span>/<span id="max-mistakes">5</span></div></div>
+                <div class="info-box"><div class="label">Score</div><div class="value" id="score">0</div></div>
+            </div>
+
+            <div class="message-banner" id="message">Tap a Zoombini, then tap a bridge to send them across.</div>
+
+            <div class="scene">
+                <div class="cliffs-area">
+                    <div class="stars" id="stars"></div>
+                    <div class="cliff-pair">
+                        <div class="cliff left" id="cliff-left" onclick="sendToCliff('left')">
+                            <div class="cliff-label">Left Bridge</div>
+                        </div>
+                        <div class="gap"></div>
+                        <div class="cliff right" id="cliff-right" onclick="sendToCliff('right')">
+                            <div class="cliff-label">Right Bridge</div>
+                        </div>
+                    </div>
+                    <div class="crossed-zone">
+                        <div class="crossed-side" id="crossed-left"></div>
+                        <div class="crossed-side" id="crossed-right"></div>
+                    </div>
+                </div>
+                <div class="queue-area" id="queue"></div>
+            </div>
+
+            <div class="game-controls">
+                <button class="btn" onclick="useHint()" id="hint-btn">Hint</button>
+                <button class="btn btn-secondary" onclick="quitGame()">Quit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="game-over-overlay">
+        <div class="game-over-box">
+            <h2 id="end-title">Game Over</h2>
+            <div class="final-score" id="end-score">0</div>
+            <p id="end-message"></p>
+            <div id="reveal-area"></div>
+            <div style="margin-top:16px;">
+                <button class="btn btn-primary" onclick="restartGame()">Play Again</button>
+                <button class="btn" onclick="GameUtils.goToLauncher()">Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        // ---------- Feature Definitions ----------
+        const FEATURE_OPTIONS = {
+            hair: ['tuft', 'ponytail', 'propeller', 'curly', 'bald'],
+            eyes: ['round', 'sleepy', 'glasses', 'big', 'single'],
+            nose: ['greenball', 'orangetri', 'trumpet', 'redball', 'horn'],
+            feet: ['springs', 'wheels', 'suction', 'shoes', 'rollers']
+        };
+
+        const FEATURE_LABELS = {
+            hair: 'hair',
+            eyes: 'eyes',
+            nose: 'nose',
+            feet: 'feet'
+        };
+
+        const VALUE_LABELS = {
+            tuft: 'spiky tuft', ponytail: 'ponytail', propeller: 'propeller',
+            curly: 'curly bow', bald: 'bald',
+            round: 'two round eyes', sleepy: 'sleepy eyes', glasses: 'glasses',
+            big: 'big eyes', single: 'single eye',
+            greenball: 'green nose', orangetri: 'triangle nose', trumpet: 'trumpet nose',
+            redball: 'red nose', horn: 'horn nose',
+            springs: 'springs', wheels: 'wheels', suction: 'suction cups',
+            shoes: 'shoes', rollers: 'roller skates'
+        };
+
+        const DIFFICULTY = {
+            easy:   { features: ['hair', 'feet'],                 optionsPerFeature: 3, total: 8,  maxMistakes: 6, mult: 1 },
+            medium: { features: ['hair', 'eyes', 'feet'],         optionsPerFeature: 3, total: 12, maxMistakes: 5, mult: 2 },
+            hard:   { features: ['hair', 'eyes', 'nose', 'feet'], optionsPerFeature: 4, total: 16, maxMistakes: 4, mult: 3 }
+        };
+
+        // ---------- State ----------
+        let state = null;
+        let selectedDiff = 'medium';
+
+        function setDifficulty(d) {
+            selectedDiff = d;
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('selected', b.dataset.diff === d));
+        }
+
+        // ---------- Zoombini SVG Renderer ----------
+        function renderZoombini(z, sizePx) {
+            const size = sizePx || 60;
+            const h = Math.round(size * 1.4);
+            const features = state ? state.activeFeatures : Object.keys(FEATURE_OPTIONS);
+
+            // Default any missing feature to the first option (for setup display)
+            const get = (f) => z[f] !== undefined ? z[f] : FEATURE_OPTIONS[f][0];
+
+            return `
+                <svg viewBox="0 0 80 110" width="${size}" height="${h}" class="zoombini">
+                    ${renderFeet(get('feet'))}
+                    <ellipse cx="40" cy="55" rx="28" ry="28" fill="#5b9bf5" stroke="#1e40af" stroke-width="2"/>
+                    <ellipse cx="32" cy="48" rx="8" ry="5" fill="#7eb5fb" opacity="0.6"/>
+                    ${renderEyes(get('eyes'))}
+                    ${renderNose(get('nose'))}
+                    ${renderHair(get('hair'))}
+                </svg>
+            `;
+        }
+
+        function renderHair(type) {
+            switch(type) {
+                case 'tuft':
+                    return `<g stroke="#1f2937" stroke-width="2.5" stroke-linecap="round" fill="none">
+                        <line x1="32" y1="32" x2="29" y2="20"/>
+                        <line x1="40" y1="30" x2="40" y2="16"/>
+                        <line x1="48" y1="32" x2="51" y2="20"/>
+                    </g>`;
+                case 'ponytail':
+                    return `<path d="M 50 30 Q 65 22 62 14 Q 58 12 56 18" fill="#7c2d12" stroke="#451a03" stroke-width="1.5"/>`;
+                case 'propeller':
+                    return `<g>
+                        <line x1="40" y1="30" x2="40" y2="20" stroke="#1f2937" stroke-width="2"/>
+                        <ellipse cx="40" cy="18" rx="14" ry="2.5" fill="#dc2626" stroke="#7f1d1d" stroke-width="1"/>
+                        <circle cx="40" cy="18" r="2" fill="#1f2937"/>
+                    </g>`;
+                case 'curly':
+                    return `<g fill="#ec4899" stroke="#831843" stroke-width="1.5">
+                        <circle cx="32" cy="22" r="4"/>
+                        <circle cx="40" cy="18" r="4"/>
+                        <circle cx="48" cy="22" r="4"/>
+                    </g>`;
+                case 'bald':
+                default:
+                    return '';
+            }
+        }
+
+        function renderEyes(type) {
+            switch(type) {
+                case 'round':
+                    return `<g fill="#1f2937">
+                        <circle cx="32" cy="50" r="3"/>
+                        <circle cx="48" cy="50" r="3"/>
+                    </g>`;
+                case 'sleepy':
+                    return `<g fill="none" stroke="#1f2937" stroke-width="2.5" stroke-linecap="round">
+                        <path d="M 28 51 Q 32 47 36 51"/>
+                        <path d="M 44 51 Q 48 47 52 51"/>
+                        <line x1="29" y1="48" x2="28" y2="46"/>
+                        <line x1="32" y1="46" x2="32" y2="44"/>
+                        <line x1="35" y1="47" x2="36" y2="45"/>
+                        <line x1="45" y1="48" x2="44" y2="46"/>
+                        <line x1="48" y1="46" x2="48" y2="44"/>
+                        <line x1="51" y1="47" x2="52" y2="45"/>
+                    </g>`;
+                case 'glasses':
+                    return `<g fill="none" stroke="#1f2937" stroke-width="2">
+                        <circle cx="32" cy="50" r="5" fill="#fef3c7"/>
+                        <circle cx="48" cy="50" r="5" fill="#fef3c7"/>
+                        <line x1="37" y1="50" x2="43" y2="50"/>
+                        <circle cx="32" cy="50" r="1.5" fill="#1f2937"/>
+                        <circle cx="48" cy="50" r="1.5" fill="#1f2937"/>
+                    </g>`;
+                case 'big':
+                    return `<g>
+                        <circle cx="32" cy="50" r="6" fill="#fff" stroke="#1f2937" stroke-width="1.5"/>
+                        <circle cx="48" cy="50" r="6" fill="#fff" stroke="#1f2937" stroke-width="1.5"/>
+                        <circle cx="33" cy="51" r="2.5" fill="#1f2937"/>
+                        <circle cx="49" cy="51" r="2.5" fill="#1f2937"/>
+                    </g>`;
+                case 'single':
+                    return `<g>
+                        <circle cx="40" cy="50" r="8" fill="#fff" stroke="#1f2937" stroke-width="2"/>
+                        <circle cx="41" cy="51" r="3.5" fill="#1f2937"/>
+                        <circle cx="42" cy="49" r="1" fill="#fff"/>
+                    </g>`;
+                default:
+                    return '';
+            }
+        }
+
+        function renderNose(type) {
+            switch(type) {
+                case 'greenball':
+                    return `<circle cx="40" cy="62" r="3" fill="#22c55e" stroke="#14532d" stroke-width="1"/>`;
+                case 'orangetri':
+                    return `<polygon points="40,58 36,66 44,66" fill="#f97316" stroke="#7c2d12" stroke-width="1"/>`;
+                case 'trumpet':
+                    return `<g fill="#facc15" stroke="#78350f" stroke-width="1">
+                        <rect x="38" y="60" width="4" height="6"/>
+                        <polygon points="36,67 44,67 46,71 34,71"/>
+                    </g>`;
+                case 'redball':
+                    return `<circle cx="40" cy="62" r="3.5" fill="#ef4444" stroke="#7f1d1d" stroke-width="1"/>`;
+                case 'horn':
+                    return `<path d="M 40 58 L 38 66 L 42 66 Z" fill="#a78bfa" stroke="#4c1d95" stroke-width="1"/>`;
+                default:
+                    return '';
+            }
+        }
+
+        function renderFeet(type) {
+            switch(type) {
+                case 'springs':
+                    return `<g stroke="#1f2937" stroke-width="2" fill="none">
+                        <path d="M 28 80 L 26 84 L 30 86 L 26 88 L 30 90 L 26 92 L 30 94"/>
+                        <path d="M 52 80 L 50 84 L 54 86 L 50 88 L 54 90 L 50 92 L 54 94"/>
+                        <ellipse cx="28" cy="98" rx="6" ry="3" fill="#1f2937"/>
+                        <ellipse cx="52" cy="98" rx="6" ry="3" fill="#1f2937"/>
+                    </g>`;
+                case 'wheels':
+                    return `<g>
+                        <line x1="28" y1="80" x2="28" y2="92" stroke="#1f2937" stroke-width="2"/>
+                        <line x1="52" y1="80" x2="52" y2="92" stroke="#1f2937" stroke-width="2"/>
+                        <circle cx="28" cy="96" r="6" fill="#1f2937" stroke="#000" stroke-width="1"/>
+                        <circle cx="52" cy="96" r="6" fill="#1f2937" stroke="#000" stroke-width="1"/>
+                        <circle cx="28" cy="96" r="2" fill="#9ca3af"/>
+                        <circle cx="52" cy="96" r="2" fill="#9ca3af"/>
+                    </g>`;
+                case 'suction':
+                    return `<g fill="#dc2626" stroke="#7f1d1d" stroke-width="1.5">
+                        <path d="M 22 82 L 34 82 L 32 95 Q 28 100 24 95 Z"/>
+                        <path d="M 46 82 L 58 82 L 56 95 Q 52 100 48 95 Z"/>
+                    </g>`;
+                case 'shoes':
+                    return `<g fill="#7c3aed" stroke="#4c1d95" stroke-width="1.5">
+                        <ellipse cx="28" cy="92" rx="9" ry="6"/>
+                        <ellipse cx="52" cy="92" rx="9" ry="6"/>
+                        <ellipse cx="28" cy="89" rx="5" ry="2" fill="#a78bfa"/>
+                        <ellipse cx="52" cy="89" rx="5" ry="2" fill="#a78bfa"/>
+                    </g>`;
+                case 'rollers':
+                    return `<g>
+                        <rect x="20" y="84" width="18" height="6" fill="#facc15" stroke="#78350f" stroke-width="1.5" rx="2"/>
+                        <rect x="42" y="84" width="18" height="6" fill="#facc15" stroke="#78350f" stroke-width="1.5" rx="2"/>
+                        <circle cx="24" cy="94" r="3" fill="#1f2937"/>
+                        <circle cx="34" cy="94" r="3" fill="#1f2937"/>
+                        <circle cx="46" cy="94" r="3" fill="#1f2937"/>
+                        <circle cx="56" cy="94" r="3" fill="#1f2937"/>
+                    </g>`;
+                default:
+                    return '';
+            }
+        }
+
+        // ---------- Setup ----------
+        function generateZoombinis(activeFeatures, optionsPer, count, allergies) {
+            const zs = [];
+            // Build pool of options per active feature
+            const pool = {};
+            activeFeatures.forEach(f => {
+                pool[f] = FEATURE_OPTIONS[f].slice(0, optionsPer);
+            });
+            // Generate count zoombinis ensuring not all have BOTH allergies
+            // (to keep puzzle solvable: every zoombini can cross at least one bridge)
+            for (let i = 0; i < count; i++) {
+                let z, attempts = 0;
+                do {
+                    z = { id: i };
+                    activeFeatures.forEach(f => {
+                        z[f] = pool[f][Math.floor(Math.random() * pool[f].length)];
+                    });
+                    attempts++;
+                } while (
+                    attempts < 50 &&
+                    allergies &&
+                    z[allergies.left.feature] === allergies.left.value &&
+                    z[allergies.right.feature] === allergies.right.value
+                );
+                zs.push(z);
+            }
+            return zs;
+        }
+
+        function pickAllergies(activeFeatures, optionsPer) {
+            // Two cliffs, each allergic to one (feature, value) pair.
+            // Allergies must be DIFFERENT (different feature OR different value on same feature).
+            const pickOne = () => {
+                const f = activeFeatures[Math.floor(Math.random() * activeFeatures.length)];
+                const v = FEATURE_OPTIONS[f].slice(0, optionsPer)[Math.floor(Math.random() * optionsPer)];
+                return { feature: f, value: v };
+            };
+            const left = pickOne();
+            let right;
+            let attempts = 0;
+            do {
+                right = pickOne();
+                attempts++;
+            } while (attempts < 50 && right.feature === left.feature && right.value === left.value);
+            return { left, right };
+        }
+
+        // ---------- Game Lifecycle ----------
+        function startGame() {
+            const cfg = DIFFICULTY[selectedDiff];
+            const allergies = pickAllergies(cfg.features, cfg.optionsPerFeature);
+            const zoombinis = generateZoombinis(cfg.features, cfg.optionsPerFeature, cfg.total, allergies);
+
+            state = {
+                difficulty: selectedDiff,
+                cfg,
+                activeFeatures: cfg.features,
+                allergies,
+                queue: zoombinis,
+                crossedLeft: [],
+                crossedRight: [],
+                mistakes: 0,
+                score: 0,
+                selectedId: null,
+                hintsUsed: 0,
+                gameOver: false,
+                history: { left: [], right: [] }  // for hint analysis
+            };
+
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            document.getElementById('total').textContent = cfg.total;
+            document.getElementById('max-mistakes').textContent = cfg.maxMistakes;
+
+            generateStars();
+            updateUI();
+            setMessage('Tap a Zoombini, then tap a bridge to send them across.', '');
+        }
+
+        function generateStars() {
+            const container = document.getElementById('stars');
+            container.innerHTML = '';
+            for (let i = 0; i < 35; i++) {
+                const s = document.createElement('div');
+                s.className = 'star' + (Math.random() > 0.7 ? ' big' : '');
+                s.style.left = Math.random() * 100 + '%';
+                s.style.top = Math.random() * 70 + '%';
+                s.style.opacity = (0.4 + Math.random() * 0.6).toFixed(2);
+                container.appendChild(s);
+            }
+        }
+
+        function updateUI() {
+            // Queue
+            const queueEl = document.getElementById('queue');
+            queueEl.innerHTML = '';
+            state.queue.forEach(z => {
+                const slot = document.createElement('div');
+                slot.className = 'zoombini-slot' + (state.selectedId === z.id ? ' selected' : '');
+                slot.dataset.zid = z.id;
+                slot.innerHTML = renderZoombini(z, 60);
+                slot.addEventListener('click', () => selectZoombini(z.id));
+                queueEl.appendChild(slot);
+            });
+            if (state.queue.length === 0) {
+                queueEl.innerHTML = '<div style="color:#bbf7d0; font-style:italic;">All Zoombinis crossed!</div>';
+            }
+
+            // Crossed (small versions on cliff tops)
+            renderCrossedSide('crossed-left', state.crossedLeft);
+            renderCrossedSide('crossed-right', state.crossedRight);
+
+            // Counters
+            const crossedTotal = state.crossedLeft.length + state.crossedRight.length;
+            document.getElementById('crossed').textContent = crossedTotal;
+            document.getElementById('mistakes').textContent = state.mistakes;
+            document.getElementById('score').textContent = state.score;
+
+            // Cliff targetability: only show dashed border if a zoombini is selected
+            const hasSel = state.selectedId !== null;
+            document.getElementById('cliff-left').classList.toggle('targetable', hasSel);
+            document.getElementById('cliff-right').classList.toggle('targetable', hasSel);
+        }
+
+        function renderCrossedSide(elId, list) {
+            const el = document.getElementById(elId);
+            el.innerHTML = '';
+            list.forEach(z => {
+                const div = document.createElement('div');
+                div.innerHTML = renderZoombini(z, 36);
+                el.appendChild(div.firstElementChild);
+            });
+        }
+
+        function selectZoombini(id) {
+            if (state.gameOver) return;
+            state.selectedId = state.selectedId === id ? null : id;
+            updateUI();
+            if (state.selectedId !== null) {
+                setMessage('Now tap the Left Bridge or the Right Bridge.', '');
+            } else {
+                setMessage('Tap a Zoombini, then tap a bridge to send them across.', '');
+            }
+        }
+
+        function sendToCliff(side) {
+            if (state.gameOver) return;
+            if (state.selectedId === null) {
+                setMessage('Tap a Zoombini first!', 'error');
+                return;
+            }
+            const idx = state.queue.findIndex(z => z.id === state.selectedId);
+            if (idx < 0) return;
+            const z = state.queue[idx];
+
+            const allergy = state.allergies[side];
+            const isAllergic = z[allergy.feature] === allergy.value;
+
+            const slot = document.querySelector(`.zoombini-slot[data-zid="${z.id}"]`);
+            const queueRect = document.getElementById('queue').getBoundingClientRect();
+            const cliffEl = document.getElementById('cliff-' + side);
+            const cliffRect = cliffEl.getBoundingClientRect();
+            const slotRect = slot ? slot.getBoundingClientRect() : queueRect;
+            const dx = (cliffRect.left + cliffRect.width / 2) - (slotRect.left + slotRect.width / 2);
+            if (slot) slot.style.setProperty('--dx', dx + 'px');
+
+            // Record observation for hint logic
+            state.history[side].push({ z, allergic: isAllergic });
+
+            if (isAllergic) {
+                // Sneeze!
+                if (slot) slot.firstElementChild.classList.add('sneezed');
+                showSneezeEffect(cliffEl);
+                state.mistakes++;
+                state.selectedId = null;
+                setMessage(`Atchoo! The ${side === 'left' ? 'Left' : 'Right'} Bridge sneezes that Zoombini away!`, 'error');
+
+                setTimeout(() => {
+                    if (slot && slot.firstElementChild) slot.firstElementChild.classList.remove('sneezed');
+                    if (state.mistakes >= state.cfg.maxMistakes) {
+                        endGame(false);
+                    } else {
+                        updateUI();
+                    }
+                }, 800);
+            } else {
+                // Cross successfully
+                if (slot) slot.firstElementChild.classList.add('crossing');
+                const points = 100 * state.cfg.mult;
+                state.score += points;
+
+                setTimeout(() => {
+                    state.queue.splice(idx, 1);
+                    if (side === 'left') state.crossedLeft.push(z);
+                    else state.crossedRight.push(z);
+                    state.selectedId = null;
+                    setMessage(`+${points} points! Safely across.`, 'success');
+                    updateUI();
+                    if (state.queue.length === 0) {
+                        endGame(true);
+                    }
+                }, 700);
+            }
+        }
+
+        function showSneezeEffect(cliffEl) {
+            const rect = cliffEl.getBoundingClientRect();
+            const sceneRect = document.querySelector('.scene').getBoundingClientRect();
+            const fx = document.createElement('div');
+            fx.className = 'sneeze-fx';
+            fx.textContent = 'AH-CHOO!';
+            fx.style.left = (rect.left - sceneRect.left + rect.width / 2) + 'px';
+            fx.style.top = (rect.top - sceneRect.top + 30) + 'px';
+            document.querySelector('.scene').appendChild(fx);
+            setTimeout(() => fx.remove(), 700);
+        }
+
+        function setMessage(text, kind) {
+            const el = document.getElementById('message');
+            el.textContent = text;
+            el.className = 'message-banner' + (kind ? ' ' + kind : '');
+        }
+
+        // ---------- Hints ----------
+        function useHint() {
+            if (state.gameOver) return;
+            // Hint cost: 1 mistake worth of points (50 * mult), capped at score
+            const cost = 50 * state.cfg.mult;
+            if (state.score < cost) {
+                setMessage(`Need ${cost} points for a hint! Cross a few Zoombinis first.`, 'error');
+                return;
+            }
+            state.score -= cost;
+            state.hintsUsed++;
+
+            // Provide a deduction hint for one cliff
+            const sides = ['left', 'right'];
+            const side = sides[Math.floor(Math.random() * 2)];
+            const allergy = state.allergies[side];
+            const cliffName = side === 'left' ? 'Left Bridge' : 'Right Bridge';
+            setMessage(`Hint: The ${cliffName} reacts to ${FEATURE_LABELS[allergy.feature]}.`, 'hint');
+            updateUI();
+        }
+
+        // ---------- End Game ----------
+        function endGame(won) {
+            state.gameOver = true;
+            // Bonus for unused mistake budget
+            if (won) {
+                const mistakeBudgetLeft = state.cfg.maxMistakes - state.mistakes;
+                state.score += mistakeBudgetLeft * 200 * state.cfg.mult;
+            }
+            // Save stats and high score
+            GameUtils.stats.update('zoombini', won ? 'win' : 'loss');
+            const playerName = GameUtils.playerName.get(1);
+            GameUtils.highScores.add('zoombini', playerName, state.score, {
+                difficulty: state.difficulty,
+                crossed: state.crossedLeft.length + state.crossedRight.length,
+                total: state.cfg.total
+            });
+
+            // Show overlay
+            document.getElementById('end-title').textContent = won ? 'You Did It!' : 'Bridge Collapsed!';
+            document.getElementById('end-score').textContent = state.score;
+            const crossedTotal = state.crossedLeft.length + state.crossedRight.length;
+            document.getElementById('end-message').textContent = won
+                ? `All ${state.cfg.total} Zoombinis crossed safely with ${state.mistakes} mistake${state.mistakes === 1 ? '' : 's'}!`
+                : `${crossedTotal} of ${state.cfg.total} Zoombinis made it across.`;
+
+            // Reveal allergies
+            const reveal = document.getElementById('reveal-area');
+            reveal.innerHTML = `
+                <div style="font-size:0.9rem; color:var(--text-secondary); margin:8px 0;">The cliff allergies were:</div>
+                <div class="reveal-row">
+                    <div class="reveal-block">
+                        <div class="reveal-label">Left Bridge</div>
+                        ${renderAllergyZoombini(state.allergies.left)}
+                        <div style="margin-top:4px; font-size:0.85rem;">${VALUE_LABELS[state.allergies.left.value]}</div>
+                    </div>
+                    <div class="reveal-block">
+                        <div class="reveal-label">Right Bridge</div>
+                        ${renderAllergyZoombini(state.allergies.right)}
+                        <div style="margin-top:4px; font-size:0.85rem;">${VALUE_LABELS[state.allergies.right.value]}</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('game-over-overlay').classList.add('active');
+        }
+
+        function renderAllergyZoombini(allergy) {
+            const z = {};
+            state.activeFeatures.forEach(f => {
+                z[f] = FEATURE_OPTIONS[f][0]; // default
+            });
+            z[allergy.feature] = allergy.value;
+            return renderZoombini(z, 50);
+        }
+
+        function restartGame() {
+            document.getElementById('game-over-overlay').classList.remove('active');
+            startGame();
+        }
+
+        function quitGame() {
+            GameUtils.showModal('Quit Game?', 'Your progress will be lost.', [
+                { text: 'Cancel' },
+                { text: 'Quit', primary: true, action: () => {
+                    document.getElementById('game-screen').style.display = 'none';
+                    document.getElementById('setup-screen').style.display = 'block';
+                    state = null;
+                    showHighScores();
+                }}
+            ]);
+        }
+
+        // ---------- High Scores ----------
+        function showHighScores() {
+            const scores = GameUtils.highScores.get('zoombini');
+            const el = document.getElementById('hi-scores');
+            if (scores.length === 0) {
+                el.innerHTML = '';
+                return;
+            }
+            let html = '<h3 style="margin-bottom:10px;">High Scores</h3><table class="high-scores-table"><thead><tr><th>#</th><th>Player</th><th>Score</th><th>Difficulty</th><th>Crossed</th></tr></thead><tbody>';
+            scores.slice(0, 5).forEach((s, i) => {
+                html += `<tr><td>${i+1}</td><td>${GameUtils.escapeHtml(s.player)}</td><td>${s.score}</td><td>${s.difficulty || '-'}</td><td>${s.crossed != null ? s.crossed + '/' + s.total : '-'}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            el.innerHTML = html;
+        }
+
+        showHighScores();
+    </script>
+</body>
+</html>
