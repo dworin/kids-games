@@ -31,7 +31,8 @@ A collection of 32 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── artillery.html      # Gorillas-style artillery game
     ├── scrabble.html       # Classic word tile game
     ├── monopoly.html       # Classic property trading board game
-    └── zoombini.html       # Allergic Cliffs logic/deduction puzzle
+    ├── zoombini.html       # Allergic Cliffs logic/deduction puzzle
+    └── guesswho.html       # Character-deduction yes/no question game
 ```
 
 ## Key Features
@@ -210,6 +211,18 @@ A collection of 32 classic games built with vanilla HTML, CSS, and JavaScript. D
 - Simplified rules: no auctions, no trading between players
 - Score = total wealth (cash + property values) of the winner
 - 2-player mode with same-device play
+
+### Guess Who
+- Character-deduction game on a shared board of 24 randomly generated characters
+- Each character is a custom SVG face combining: skin tone, hair style (short/long/curly/bald), hair color (6), eye color (3), glasses, hat, beard, mustache
+- Generation guarantees all 24 characters have a distinct question-relevant signature (so any pair is separable by some question)
+- Both players secretly pick a character; take turns asking yes/no questions, then cross out non-matching characters on their tracking board
+- Questions are auto-generated from attributes (accessories, hair color/style, eyes); the program answers truthfully so no one can cheat or err
+- Make a Guess at any time: correct guess wins, wrong guess loses (confirmation modal warns first)
+- AI maintains a candidate set, filters it by each answer, and guesses when only one suspect remains
+- AI difficulty: Easy (random splitting question), Medium (top-half split), Hard (always optimal ~50/50 split)
+- Score (1P win only) = max(100, 700 − (questions−1)×60) × difficulty multiplier (1/2/3)
+- 2-player mode: pass-and-play with device-passing overlays and per-player tracking boards/secret cards
 
 ## Development
 To test locally:

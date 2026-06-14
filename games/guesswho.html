@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Guess Who - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .gw-banner {
+            text-align: center;
+            padding: 12px 16px;
+            margin: 12px auto;
+            max-width: 860px;
+            border-radius: 10px;
+            background: var(--card-bg);
+            font-weight: 600;
+            min-height: 24px;
+        }
+        .gw-banner.success { background: linear-gradient(135deg, #047857, #065f46); }
+        .gw-banner.error { background: linear-gradient(135deg, #b91c1c, #7f1d1d); }
+        .gw-banner.info { background: linear-gradient(135deg, #1d4ed8, #1e3a8a); }
+
+        .gw-info-row {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 10px auto;
+            max-width: 860px;
+            flex-wrap: wrap;
+        }
+        .gw-info-box {
+            padding: 8px 14px;
+            border-radius: 10px;
+            background: var(--card-bg);
+            text-align: center;
+            min-width: 88px;
+        }
+        .gw-info-box .label {
+            font-size: 0.68rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .gw-info-box .value {
+            font-size: 1.15rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .gw-board {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            max-width: 860px;
+            margin: 0 auto;
+        }
+        .gw-tile {
+            position: relative;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 6px 4px 4px;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.12s, border-color 0.12s, opacity 0.18s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .gw-tile:hover { transform: translateY(-2px); border-color: var(--primary-color); }
+        .gw-tile svg { width: 100%; height: auto; display: block; }
+        .gw-tile .gw-name {
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .gw-tile.eliminated {
+            opacity: 0.32;
+            filter: grayscale(0.9);
+        }
+        .gw-tile.eliminated::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(to top left, transparent calc(50% - 1.5px), var(--danger-color) calc(50% - 1.5px), var(--danger-color) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
+                linear-gradient(to top right, transparent calc(50% - 1.5px), var(--danger-color) calc(50% - 1.5px), var(--danger-color) calc(50% + 1.5px), transparent calc(50% + 1.5px));
+            border-radius: 8px;
+            pointer-events: none;
+        }
+        .gw-tile.secret-pick {
+            border-color: #fbbf24;
+            box-shadow: 0 0 0 3px rgba(251,191,36,0.4);
+        }
+        .gw-tile.guessable {
+            border-color: #22c55e;
+            box-shadow: 0 0 0 2px rgba(34,197,94,0.4);
+        }
+        .gw-tile.guess-disabled { cursor: not-allowed; }
+
+        .gw-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 14px auto;
+            flex-wrap: wrap;
+            max-width: 860px;
+        }
+
+        .gw-secret-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+            margin: 8px auto;
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 6px 14px;
+            max-width: 320px;
+            border: 2px solid #fbbf24;
+        }
+        .gw-secret-card svg { width: 42px; height: 50px; }
+        .gw-secret-card .who { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+        .gw-secret-card .nm { font-weight: 700; font-size: 1.05rem; }
+
+        .gw-qpanel {
+            max-width: 860px;
+            margin: 0 auto 14px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 14px;
+            display: none;
+        }
+        .gw-qpanel.open { display: block; }
+        .gw-qgroup { margin-bottom: 12px; }
+        .gw-qgroup h4 {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        .gw-qbtns { display: flex; flex-wrap: wrap; gap: 6px; }
+        .gw-qbtn {
+            padding: 7px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.15s;
+        }
+        .gw-qbtn:hover { border-color: var(--primary-color); background: var(--primary-color); }
+
+        .gw-log {
+            max-width: 860px;
+            margin: 0 auto 16px;
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 10px 14px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            line-height: 1.55;
+        }
+        .gw-log .entry { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .gw-log .entry:last-child { border-bottom: none; }
+        .gw-log .ans-yes { color: #4ade80; font-weight: 700; }
+        .gw-log .ans-no { color: #f87171; font-weight: 700; }
+        .gw-log .by-ai { color: #93c5fd; }
+        .gw-log .by-you { color: #fbbf24; }
+
+        .mode-grid, .difficulty-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .difficulty-grid { grid-template-columns: repeat(3, 1fr); }
+        .opt-btn {
+            padding: 14px 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .opt-btn:hover, .opt-btn.selected {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+        }
+        .opt-btn .opt-name { font-weight: 700; font-size: 1.02rem; }
+        .opt-btn .opt-detail { font-size: 0.74rem; opacity: 0.85; margin-top: 3px; }
+
+        .legend {
+            background: var(--card-bg);
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin: 14px 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+        .legend strong { color: var(--text-primary); }
+
+        #pass-overlay, #game-over-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.82);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        #pass-overlay.active, #game-over-overlay.active { display: flex; }
+        .overlay-box {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 28px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .final-score { font-size: 2.4rem; font-weight: 700; color: var(--primary-color); margin: 10px 0; }
+        .overlay-box .btn { margin: 5px; }
+        .reveal-face { display: flex; gap: 20px; justify-content: center; margin: 14px 0; }
+        .reveal-face .blk { text-align: center; }
+        .reveal-face svg { width: 70px; height: 84px; }
+        .reveal-face .lbl { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+        .reveal-face .nm { font-weight: 700; margin-top: 4px; }
+
+        @media (max-width: 640px) {
+            .gw-board { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+            .gw-tile .gw-name { font-size: 0.68rem; }
+            .mode-grid, .difficulty-grid { grid-template-columns: 1fr; }
+            .gw-info-box { min-width: 70px; padding: 6px 10px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <button class="back-btn" onclick="GameUtils.goToLauncher()">Back</button>
+        <h1>Guess Who</h1>
+    </header>
+
+    <div class="container">
+        <!-- Setup Screen -->
+        <div id="setup-screen" class="game-container">
+            <h2 style="text-align:center; margin-bottom:16px;">Guess Who</h2>
+            <div class="legend">
+                <strong>A game of deduction.</strong> Both players share a board of 24 characters and each
+                secretly picks one. Take turns asking yes/no questions about appearance &mdash; glasses, hats,
+                beards, hair color and more &mdash; then cross out everyone who doesn't match. Be the first to
+                correctly guess your opponent's secret character. But beware: a wrong guess loses the game!
+            </div>
+
+            <div class="form-group">
+                <label>Mode</label>
+                <div class="mode-grid">
+                    <button class="opt-btn selected" data-mode="1p" onclick="setMode('1p')">
+                        <div class="opt-name">vs Computer</div>
+                        <div class="opt-detail">Outsmart the AI</div>
+                    </button>
+                    <button class="opt-btn" data-mode="2p" onclick="setMode('2p')">
+                        <div class="opt-name">2 Players</div>
+                        <div class="opt-detail">Pass &amp; play on one device</div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group" id="difficulty-group">
+                <label>Computer Difficulty</label>
+                <div class="difficulty-grid">
+                    <button class="opt-btn" data-diff="easy" onclick="setDifficulty('easy')">
+                        <div class="opt-name">Easy</div>
+                        <div class="opt-detail">Asks random questions</div>
+                    </button>
+                    <button class="opt-btn selected" data-diff="medium" onclick="setDifficulty('medium')">
+                        <div class="opt-name">Medium</div>
+                        <div class="opt-detail">Asks decent questions</div>
+                    </button>
+                    <button class="opt-btn" data-diff="hard" onclick="setDifficulty('hard')">
+                        <div class="opt-name">Hard</div>
+                        <div class="opt-detail">Always splits optimally</div>
+                    </button>
+                </div>
+            </div>
+
+            <div style="text-align:center; margin-top:20px;">
+                <button class="btn btn-primary" onclick="startGame()" style="font-size:1.1rem; padding:12px 32px;">Start Game</button>
+            </div>
+
+            <div id="hi-scores" style="margin-top:20px;"></div>
+        </div>
+
+        <!-- Pick Secret Screen -->
+        <div id="pick-screen" style="display:none;">
+            <div class="gw-banner info" id="pick-banner">Tap your secret character.</div>
+            <div class="gw-board" id="pick-board"></div>
+            <div class="gw-controls">
+                <button class="btn btn-primary" id="confirm-secret-btn" onclick="confirmSecret()" disabled>Confirm</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" style="display:none;">
+            <div class="gw-info-row">
+                <div class="gw-info-box"><div class="label">Turn</div><div class="value" id="turn-name">You</div></div>
+                <div class="gw-info-box"><div class="label">Your Questions</div><div class="value" id="q-count">0</div></div>
+                <div class="gw-info-box" id="ai-box"><div class="label">AI Suspects</div><div class="value" id="ai-suspects">24</div></div>
+            </div>
+
+            <div class="gw-secret-card" id="secret-card"></div>
+
+            <div class="gw-banner" id="banner">Your turn. Ask a question or make a guess.</div>
+
+            <div class="gw-qpanel" id="qpanel"></div>
+
+            <div class="gw-controls" id="action-controls">
+                <button class="btn btn-primary" id="ask-btn" onclick="toggleQuestions()">Ask a Question</button>
+                <button class="btn btn-success" id="guess-btn" onclick="enterGuessMode()">Make a Guess</button>
+                <button class="btn" id="endturn-btn" onclick="endTurn()" style="display:none;">End Turn</button>
+                <button class="btn btn-secondary" id="cancelguess-btn" onclick="exitGuessMode()" style="display:none;">Cancel Guess</button>
+                <button class="btn btn-danger" onclick="quitGame()">Quit</button>
+            </div>
+
+            <div class="gw-board" id="game-board"></div>
+
+            <h4 style="max-width:860px; margin:18px auto 6px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px; font-size:0.78rem;">Question Log</h4>
+            <div class="gw-log" id="log"></div>
+        </div>
+    </div>
+
+    <!-- Pass Device Overlay -->
+    <div id="pass-overlay">
+        <div class="overlay-box">
+            <h2 id="pass-title">Pass the device</h2>
+            <p id="pass-msg" style="margin:12px 0;"></p>
+            <button class="btn btn-primary" onclick="continueAfterPass()">I'm Ready</button>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="game-over-overlay">
+        <div class="overlay-box">
+            <h2 id="end-title">Game Over</h2>
+            <div class="final-score" id="end-score"></div>
+            <p id="end-message"></p>
+            <div class="reveal-face" id="reveal-area"></div>
+            <div style="margin-top:16px;">
+                <button class="btn btn-primary" onclick="restartGame()">Play Again</button>
+                <button class="btn" onclick="GameUtils.goToLauncher()">Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+        // ---------- Option data ----------
+        const HAIR_HEX = { black:'#2b2b2b', brown:'#6b4423', blonde:'#e3b04b', red:'#b5482a', white:'#ececec', gray:'#9aa0a6' };
+        const EYE_HEX  = { blue:'#3b82f6', brown:'#6b4423', green:'#22a06b' };
+        const SKIN_TONES = ['#ffe0bd','#f1c27d','#e0ac69','#c68642','#8d5524'];
+        const HAT_HEX = ['#ef4444','#3b82f6','#22c55e','#a855f7','#f59e0b','#14b8a6'];
+        const HAIR_COLORS = ['black','brown','blonde','red','white','gray'];
+        const HAIR_STYLES = ['short','long','curly'];
+        const EYE_COLORS = ['blue','brown','green'];
+        const NAMES = ['Alex','Bella','Carlos','Diana','Eli','Fiona','George','Hana','Ivan','Julia',
+                       'Kevin','Luna','Marco','Nina','Omar','Priya','Quinn','Rosa','Sam','Tara',
+                       'Umar','Vera','Will','Xena','Yara','Zane'];
+
+        const DIFFICULTY = { easy:{mult:1}, medium:{mult:2}, hard:{mult:3} };
+
+        // ---------- Questions ----------
+        function colorLabel(c) { return c.charAt(0).toUpperCase() + c.slice(1); }
+        const QUESTIONS = [
+            { group:'Accessories', id:'glasses',  text:'Wearing glasses?',  test:c=>c.glasses },
+            { group:'Accessories', id:'hat',      text:'Wearing a hat?',    test:c=>c.hat },
+            { group:'Accessories', id:'beard',    text:'Has a beard?',      test:c=>c.beard },
+            { group:'Accessories', id:'mustache', text:'Has a mustache?',   test:c=>c.mustache },
+            { group:'Hair',        id:'bald',     text:'Bald?',             test:c=>c.hairStyle==='bald' },
+            { group:'Hair Style',  id:'curly',    text:'Curly hair?',       test:c=>c.hairStyle==='curly' },
+            { group:'Hair Style',  id:'long',     text:'Long hair?',        test:c=>c.hairStyle==='long' },
+            { group:'Hair Style',  id:'short',    text:'Short hair?',       test:c=>c.hairStyle==='short' },
+        ];
+        HAIR_COLORS.forEach(col => QUESTIONS.push({
+            group:'Hair Color', id:'hair_'+col, text:colorLabel(col)+' hair?',
+            test:c => c.hairStyle!=='bald' && c.hairColor===col
+        }));
+        EYE_COLORS.forEach(col => QUESTIONS.push({
+            group:'Eyes', id:'eye_'+col, text:colorLabel(col)+' eyes?',
+            test:c => c.eyeColor===col
+        }));
+
+        // ---------- State ----------
+        let state = null;
+        let selectedMode = '1p';
+        let selectedDiff = 'medium';
+        let pendingSecret = null;
+        let passContinuation = null;
+
+        function setMode(m) {
+            selectedMode = m;
+            document.querySelectorAll('.opt-btn[data-mode]').forEach(b => b.classList.toggle('selected', b.dataset.mode === m));
+            document.getElementById('difficulty-group').style.display = m === '1p' ? 'block' : 'none';
+        }
+        function setDifficulty(d) {
+            selectedDiff = d;
+            document.querySelectorAll('.opt-btn[data-diff]').forEach(b => b.classList.toggle('selected', b.dataset.diff === d));
+        }
+
+        function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+        // ---------- Character generation ----------
+        function generateCharacters() {
+            const names = GameUtils.shuffleArray(NAMES).slice(0, 24);
+            const chars = [];
+            const seen = new Set();
+            let id = 0;
+            while (chars.length < 24) {
+                const bald = Math.random() < 0.16;
+                const hairStyle = bald ? 'bald' : rand(HAIR_STYLES);
+                const hairColor = rand(HAIR_COLORS);
+                const c = {
+                    id,
+                    name: names[chars.length],
+                    skin: rand(SKIN_TONES),
+                    hairStyle,
+                    hairColor,
+                    eyeColor: rand(EYE_COLORS),
+                    glasses: Math.random() < 0.4,
+                    hat: Math.random() < 0.3,
+                    beard: Math.random() < 0.28,
+                    mustache: Math.random() < 0.3,
+                    hatColor: rand(HAT_HEX)
+                };
+                // signature on question-relevant attributes (exclude name/skin/hatColor)
+                const sig = [hairStyle, bald ? '-' : hairColor, c.eyeColor, c.glasses, c.hat, c.beard, c.mustache].join('|');
+                if (seen.has(sig)) continue;
+                seen.add(sig);
+                chars.push(c);
+                id++;
+            }
+            return chars;
+        }
+
+        // ---------- Face renderer ----------
+        function renderFace(c) {
+            const skin = c.skin;
+            const hairHex = HAIR_HEX[c.hairColor];
+            const eyeHex = EYE_HEX[c.eyeColor];
+            const facialHex = c.hairStyle === 'bald' ? '#6b4423' : hairHex;
+
+            let hairBack = '', hairTop = '';
+            if (c.hairStyle === 'short') {
+                hairTop = `<path d="M20 52 Q24 18 50 18 Q76 18 80 52 Q70 34 50 34 Q30 34 20 52 Z" fill="${hairHex}"/>`;
+            } else if (c.hairStyle === 'long') {
+                hairBack = `<path d="M16 50 Q12 98 28 98 L32 58 Z" fill="${hairHex}"/>`
+                         + `<path d="M84 50 Q88 98 72 98 L68 58 Z" fill="${hairHex}"/>`;
+                hairTop = `<path d="M18 54 Q22 16 50 16 Q78 16 82 54 Q70 32 50 32 Q30 32 18 54 Z" fill="${hairHex}"/>`;
+            } else if (c.hairStyle === 'curly') {
+                hairTop = [26,38,50,62,74].map(x =>
+                    `<circle cx="${x}" cy="30" r="11" fill="${hairHex}"/>`).join('')
+                    + `<circle cx="20" cy="44" r="9" fill="${hairHex}"/><circle cx="80" cy="44" r="9" fill="${hairHex}"/>`;
+            }
+
+            const head = `
+                <ellipse cx="50" cy="20" rx="0" ry="0"/>
+                <circle cx="20" cy="60" r="6.5" fill="${skin}" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+                <circle cx="80" cy="60" r="6.5" fill="${skin}" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+                <ellipse cx="50" cy="58" rx="30" ry="36" fill="${skin}" stroke="rgba(0,0,0,0.2)" stroke-width="1.5"/>`;
+
+            const eyes = `
+                <ellipse cx="38" cy="56" rx="6.5" ry="5" fill="#fff" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+                <ellipse cx="62" cy="56" rx="6.5" ry="5" fill="#fff" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+                <circle cx="38" cy="56" r="2.8" fill="${eyeHex}"/>
+                <circle cx="62" cy="56" r="2.8" fill="${eyeHex}"/>
+                <circle cx="38" cy="56" r="1.2" fill="#000"/>
+                <circle cx="62" cy="56" r="1.2" fill="#000"/>
+                <circle cx="39.2" cy="55" r="0.7" fill="#fff"/>
+                <circle cx="63.2" cy="55" r="0.7" fill="#fff"/>
+                <path d="M31 48 Q38 45 45 48" fill="none" stroke="#4a3526" stroke-width="2" stroke-linecap="round"/>
+                <path d="M55 48 Q62 45 69 48" fill="none" stroke="#4a3526" stroke-width="2" stroke-linecap="round"/>`;
+
+            const nose = `<path d="M50 58 L47 68 Q50 70 53 68 Z" fill="rgba(0,0,0,0.12)"/>`;
+
+            const beard = c.beard
+                ? `<path d="M24 60 Q26 94 50 96 Q74 94 76 60 Q70 80 58 84 L42 84 Q30 80 24 60 Z" fill="${facialHex}"/>`
+                : '';
+            const mouth = `<path d="M42 76 Q50 82 58 76" fill="none" stroke="#a64b3a" stroke-width="2.4" stroke-linecap="round"/>`;
+            const mustache = c.mustache
+                ? `<path d="M40 70 Q50 67 50 70 Q50 67 60 70 Q50 75 50 72 Q50 75 40 70 Z" fill="${facialHex}"/>`
+                : '';
+
+            const glasses = c.glasses
+                ? `<g fill="rgba(255,255,255,0.12)" stroke="#222" stroke-width="2">
+                     <circle cx="38" cy="56" r="9"/>
+                     <circle cx="62" cy="56" r="9"/>
+                     <line x1="47" y1="56" x2="53" y2="56"/>
+                     <line x1="29" y1="56" x2="18" y2="52"/>
+                     <line x1="71" y1="56" x2="82" y2="52"/>
+                   </g>`
+                : '';
+
+            const hat = c.hat
+                ? `<path d="M22 46 Q50 14 78 46 Z" fill="${c.hatColor}"/>
+                   <rect x="14" y="44" width="72" height="8" rx="4" fill="${c.hatColor}" stroke="rgba(0,0,0,0.2)" stroke-width="1"/>
+                   <rect x="14" y="44" width="72" height="3" rx="1.5" fill="rgba(255,255,255,0.18)"/>`
+                : '';
+
+            return `<svg viewBox="0 0 100 104" preserveAspectRatio="xMidYMid meet">
+                ${hairBack}
+                ${head}
+                ${eyes}
+                ${nose}
+                ${beard}
+                ${mouth}
+                ${mustache}
+                ${glasses}
+                ${hairTop}
+                ${hat}
+            </svg>`;
+        }
+
+        // ---------- Game lifecycle ----------
+        function startGame() {
+            const chars = generateCharacters();
+            const aiPlayer = selectedMode === '1p';
+            state = {
+                mode: selectedMode,
+                difficulty: selectedDiff,
+                mult: DIFFICULTY[selectedDiff].mult,
+                characters: chars,
+                players: {
+                    a: { key:'a', name: GameUtils.playerName.get(1), isAI:false, secretId:null, eliminated:new Set(), questionCount:0 },
+                    b: aiPlayer
+                        ? { key:'b', name:'Computer', isAI:true, secretId:null, eliminated:new Set(), questionCount:0, candidates: chars.map(c=>c.id) }
+                        : { key:'b', name: GameUtils.playerName.get(2), isAI:false, secretId:null, eliminated:new Set(), questionCount:0 }
+                },
+                turn: 'a',
+                phase: 'pickSecret',
+                askedThisTurn: false,
+                guessMode: false,
+                log: []
+            };
+
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('pick-screen').style.display = 'block';
+
+            beginSecretPick('a');
+        }
+
+        // ---------- Secret picking ----------
+        function beginSecretPick(key) {
+            state.pickingFor = key;
+            pendingSecret = null;
+            const player = state.players[key];
+
+            const startPick = () => {
+                document.getElementById('confirm-secret-btn').disabled = true;
+                const who = state.mode === '2p' ? player.name : 'your';
+                document.getElementById('pick-banner').textContent =
+                    `Tap ${state.mode === '2p' ? who + "'s" : 'your'} secret character, then Confirm.`;
+                renderPickBoard();
+            };
+
+            if (player.isAI) {
+                // AI picks randomly, no UI
+                player.secretId = rand(state.characters).id;
+                proceedAfterSecret();
+                return;
+            }
+
+            if (state.mode === '2p') {
+                showPass(player.name, `${player.name}, get ready to choose your secret character.`, startPick);
+            } else {
+                startPick();
+            }
+        }
+
+        function renderPickBoard() {
+            const board = document.getElementById('pick-board');
+            board.innerHTML = '';
+            state.characters.forEach(c => {
+                const tile = document.createElement('div');
+                tile.className = 'gw-tile' + (pendingSecret === c.id ? ' secret-pick' : '');
+                tile.innerHTML = renderFace(c) + `<div class="gw-name">${c.name}</div>`;
+                tile.addEventListener('click', () => {
+                    pendingSecret = c.id;
+                    document.getElementById('confirm-secret-btn').disabled = false;
+                    renderPickBoard();
+                });
+                board.appendChild(tile);
+            });
+        }
+
+        function confirmSecret() {
+            if (pendingSecret === null) return;
+            state.players[state.pickingFor].secretId = pendingSecret;
+            proceedAfterSecret();
+        }
+
+        function proceedAfterSecret() {
+            // Determine next step: a -> b -> play
+            if (state.pickingFor === 'a' && state.players.b.secretId === null) {
+                beginSecretPick('b');
+            } else if (state.pickingFor === 'b' && state.players.a.secretId === null) {
+                beginSecretPick('a');
+            } else {
+                beginPlay();
+            }
+        }
+
+        // ---------- Play ----------
+        function beginPlay() {
+            state.phase = 'play';
+            document.getElementById('pick-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            document.getElementById('ai-box').style.display = state.mode === '1p' ? 'block' : 'none';
+            startTurn('a');
+        }
+
+        function startTurn(key) {
+            state.turn = key;
+            state.askedThisTurn = false;
+            state.guessMode = false;
+            const player = state.players[key];
+
+            if (player.isAI) {
+                renderGameState();
+                setBanner('The computer is thinking...', 'info');
+                document.getElementById('action-controls').style.visibility = 'hidden';
+                document.getElementById('qpanel').classList.remove('open');
+                setTimeout(aiTakeTurn, 900);
+                return;
+            }
+
+            const begin = () => {
+                document.getElementById('action-controls').style.visibility = 'visible';
+                renderGameState();
+                resetActionButtons();
+                setBanner(`${labelFor(key)} turn. Ask a question or make a guess.`, '');
+            };
+
+            if (state.mode === '2p') {
+                showPass(player.name, `${player.name}, it's your turn.`, begin);
+            } else {
+                begin();
+            }
+        }
+
+        function labelFor(key) {
+            if (state.mode === '1p') return key === 'a' ? 'Your' : "Computer's";
+            return state.players[key].name + "'s";
+        }
+
+        function resetActionButtons() {
+            document.getElementById('ask-btn').style.display = state.askedThisTurn ? 'none' : 'inline-block';
+            document.getElementById('guess-btn').style.display = 'inline-block';
+            document.getElementById('endturn-btn').style.display = state.askedThisTurn ? 'inline-block' : 'none';
+            document.getElementById('cancelguess-btn').style.display = 'none';
+            document.getElementById('qpanel').classList.remove('open');
+        }
+
+        function renderGameState() {
+            // Info
+            document.getElementById('turn-name').textContent =
+                state.mode === '1p' ? (state.turn === 'a' ? 'You' : 'Computer') : state.players[state.turn].name;
+            document.getElementById('q-count').textContent = state.players.a.questionCount;
+            if (state.mode === '1p') {
+                document.getElementById('ai-suspects').textContent = state.players.b.candidates.length;
+            }
+
+            // Secret card for the active human
+            const card = document.getElementById('secret-card');
+            const active = state.players[state.turn];
+            if (!active.isAI) {
+                const sc = state.characters[active.secretId];
+                card.style.display = 'flex';
+                card.innerHTML = renderFace(sc) +
+                    `<div><div class="who">${state.mode === '2p' ? active.name + "'s" : 'Your'} secret</div><div class="nm">${sc.name}</div></div>`;
+            } else {
+                card.style.display = 'none';
+            }
+
+            renderGameBoard();
+            renderLog();
+        }
+
+        function renderGameBoard() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+            const active = state.players[state.turn];
+            const interactive = !active.isAI;
+            state.characters.forEach(c => {
+                const eliminated = active.eliminated.has(c.id);
+                const tile = document.createElement('div');
+                let cls = 'gw-tile';
+                if (eliminated) cls += ' eliminated';
+                if (state.guessMode) cls += eliminated ? ' guess-disabled' : ' guessable';
+                tile.className = cls;
+                tile.innerHTML = renderFace(c) + `<div class="gw-name">${c.name}</div>`;
+                if (interactive) {
+                    tile.addEventListener('click', () => onTileClick(c.id));
+                }
+                board.appendChild(tile);
+            });
+        }
+
+        function onTileClick(id) {
+            const active = state.players[state.turn];
+            if (state.guessMode) {
+                if (active.eliminated.has(id)) return; // can't guess a crossed-out char
+                confirmGuess(id);
+            } else {
+                if (active.eliminated.has(id)) active.eliminated.delete(id);
+                else active.eliminated.add(id);
+                renderGameBoard();
+            }
+        }
+
+        // ---------- Asking questions ----------
+        function toggleQuestions() {
+            const panel = document.getElementById('qpanel');
+            if (panel.classList.contains('open')) { panel.classList.remove('open'); return; }
+            renderQuestionPanel();
+            panel.classList.add('open');
+        }
+
+        function renderQuestionPanel() {
+            const panel = document.getElementById('qpanel');
+            const groups = {};
+            QUESTIONS.forEach(q => { (groups[q.group] = groups[q.group] || []).push(q); });
+            let html = '';
+            Object.keys(groups).forEach(g => {
+                html += `<div class="gw-qgroup"><h4>${g}</h4><div class="gw-qbtns">`;
+                groups[g].forEach(q => {
+                    html += `<button class="gw-qbtn" onclick="askQuestion('${q.id}')">${q.text}</button>`;
+                });
+                html += '</div></div>';
+            });
+            panel.innerHTML = html;
+        }
+
+        function askQuestion(qid) {
+            const q = QUESTIONS.find(x => x.id === qid);
+            const asker = state.players[state.turn];
+            const opponent = state.players[other(state.turn)];
+            const answer = q.test(state.characters[opponent.secretId]);
+
+            asker.questionCount++;
+            state.askedThisTurn = true;
+
+            logEntry(state.turn, q.text, answer);
+            document.getElementById('qpanel').classList.remove('open');
+            renderGameState();
+            resetActionButtons();
+            setBanner(`Answer: ${answer ? 'YES' : 'NO'}. Cross out characters that don't fit, then End Turn.`, answer ? 'success' : 'error');
+        }
+
+        function endTurn() {
+            if (!state.askedThisTurn) { setBanner('Ask a question or make a guess first.', 'error'); return; }
+            startTurn(other(state.turn));
+        }
+
+        // ---------- Guessing ----------
+        function enterGuessMode() {
+            state.guessMode = true;
+            document.getElementById('ask-btn').style.display = 'none';
+            document.getElementById('guess-btn').style.display = 'none';
+            document.getElementById('endturn-btn').style.display = 'none';
+            document.getElementById('cancelguess-btn').style.display = 'inline-block';
+            document.getElementById('qpanel').classList.remove('open');
+            setBanner('Tap the character you think is your opponent\'s secret. A wrong guess loses!', 'info');
+            renderGameBoard();
+        }
+
+        function exitGuessMode() {
+            state.guessMode = false;
+            renderGameBoard();
+            resetActionButtons();
+            setBanner(`${labelFor(state.turn)} turn. Ask a question or make a guess.`, '');
+        }
+
+        function confirmGuess(id) {
+            const c = state.characters[id];
+            GameUtils.showModal('Final Guess?',
+                `Guess <strong>${c.name}</strong>? If you're wrong, you lose the game!`,
+                [
+                    { text: 'Cancel' },
+                    { text: 'Guess ' + c.name, primary: true, action: () => doGuess(id) }
+                ]);
+        }
+
+        function doGuess(id) {
+            const guesser = state.turn;
+            const opponent = other(guesser);
+            const correct = state.players[opponent].secretId === id;
+            logGuess(guesser, state.characters[id].name, correct);
+            endGame(correct ? guesser : opponent, 'guess');
+        }
+
+        // ---------- AI turn ----------
+        function aiTakeTurn() {
+            const ai = state.players.b;
+            const human = state.players.a;
+
+            // Decide: guess if confident
+            if (ai.candidates.length === 1) {
+                const guessId = ai.candidates[0];
+                logGuess('b', state.characters[guessId].name, human.secretId === guessId);
+                endGame(human.secretId === guessId ? 'b' : 'a', 'guess');
+                return;
+            }
+
+            // Choose a question to ask
+            const q = chooseAIQuestion(ai.candidates);
+            const answer = q.test(state.characters[human.secretId]);
+            ai.questionCount++;
+
+            // Update AI candidate set
+            ai.candidates = ai.candidates.filter(id => q.test(state.characters[id]) === answer);
+
+            logEntry('b', q.text, answer);
+            renderGameState();
+            setBanner(`Computer asked: "${q.text}" &mdash; You answered ${answer ? 'YES' : 'NO'}.`, answer ? 'success' : 'error');
+
+            setTimeout(() => {
+                if (ai.candidates.length === 1) {
+                    const guessId = ai.candidates[0];
+                    logGuess('b', state.characters[guessId].name, human.secretId === guessId);
+                    endGame(human.secretId === guessId ? 'b' : 'a', 'guess');
+                } else {
+                    startTurn('a');
+                }
+            }, 1400);
+        }
+
+        function chooseAIQuestion(candidates) {
+            // Score each question by how evenly it splits the candidate set.
+            const scored = QUESTIONS.map(q => {
+                let yes = 0;
+                candidates.forEach(id => { if (q.test(state.characters[id])) yes++; });
+                const split = Math.abs(yes - candidates.length / 2); // lower = better
+                const splits = yes > 0 && yes < candidates.length;
+                return { q, split, splits };
+            }).filter(s => s.splits);
+
+            if (scored.length === 0) return rand(QUESTIONS); // shouldn't happen with distinct chars
+            scored.sort((a, b) => a.split - b.split);
+
+            if (state.difficulty === 'hard') {
+                return scored[0].q;
+            } else if (state.difficulty === 'medium') {
+                const top = scored.slice(0, Math.max(1, Math.ceil(scored.length / 2)));
+                return rand(top).q;
+            } else {
+                return rand(scored).q; // easy: any splitting question at random
+            }
+        }
+
+        // ---------- Logging ----------
+        function logEntry(key, text, answer) {
+            const by = byLabel(key);
+            state.log.unshift(`<span class="${key === 'b' && state.mode === '1p' ? 'by-ai' : 'by-you'}">${by}</span> asked “${text}” &rarr; <span class="${answer ? 'ans-yes' : 'ans-no'}">${answer ? 'YES' : 'NO'}</span>`);
+        }
+        function logGuess(key, name, correct) {
+            const by = byLabel(key);
+            state.log.unshift(`<span class="${key === 'b' && state.mode === '1p' ? 'by-ai' : 'by-you'}">${by}</span> guessed <strong>${name}</strong> &rarr; <span class="${correct ? 'ans-yes' : 'ans-no'}">${correct ? 'CORRECT!' : 'WRONG'}</span>`);
+        }
+        function byLabel(key) {
+            if (state.mode === '1p') return key === 'a' ? 'You' : 'Computer';
+            return state.players[key].name;
+        }
+        function renderLog() {
+            const el = document.getElementById('log');
+            el.innerHTML = state.log.length
+                ? state.log.map(l => `<div class="entry">${l}</div>`).join('')
+                : '<div class="entry" style="color:var(--text-secondary);">No questions yet.</div>';
+        }
+
+        function setBanner(text, kind) {
+            const el = document.getElementById('banner');
+            el.innerHTML = text;
+            el.className = 'gw-banner' + (kind ? ' ' + kind : '');
+        }
+
+        function other(key) { return key === 'a' ? 'b' : 'a'; }
+
+        // ---------- Pass overlay ----------
+        function showPass(name, msg, continuation) {
+            passContinuation = continuation;
+            document.getElementById('pass-title').textContent = 'Pass the device';
+            document.getElementById('pass-msg').textContent = msg;
+            document.getElementById('pass-overlay').classList.add('active');
+        }
+        function continueAfterPass() {
+            document.getElementById('pass-overlay').classList.remove('active');
+            const fn = passContinuation;
+            passContinuation = null;
+            if (fn) fn();
+        }
+
+        // ---------- End game ----------
+        function endGame(winnerKey, reason) {
+            state.phase = 'over';
+            const playerWon = state.mode === '1p' && winnerKey === 'a';
+            const playerLost = state.mode === '1p' && winnerKey === 'b';
+
+            let score = 0;
+            if (state.mode === '1p') {
+                if (playerWon) {
+                    score = Math.max(100, 700 - (state.players.a.questionCount - 1) * 60) * state.mult;
+                }
+                GameUtils.stats.update('guesswho', playerWon ? 'win' : 'loss');
+                if (playerWon) {
+                    GameUtils.highScores.add('guesswho', state.players.a.name, score, {
+                        difficulty: state.difficulty,
+                        questions: state.players.a.questionCount
+                    });
+                }
+            }
+
+            // Title / message
+            let title, msg;
+            if (state.mode === '1p') {
+                title = playerWon ? 'You Win!' : 'You Lose';
+                msg = playerWon
+                    ? `You guessed it in ${state.players.a.questionCount} question${state.players.a.questionCount === 1 ? '' : 's'}!`
+                    : 'The computer guessed your character first.';
+            } else {
+                title = `${state.players[winnerKey].name} Wins!`;
+                msg = `${state.players[winnerKey].name} identified the secret character.`;
+            }
+
+            document.getElementById('end-title').textContent = title;
+            document.getElementById('end-score').textContent = (state.mode === '1p' && playerWon) ? score : '';
+            document.getElementById('end-message').textContent = msg;
+
+            // Reveal both secrets
+            const a = state.characters[state.players.a.secretId];
+            const b = state.characters[state.players.b.secretId];
+            const aLbl = state.mode === '1p' ? 'Your secret' : state.players.a.name + "'s secret";
+            const bLbl = state.mode === '1p' ? "Computer's secret" : state.players.b.name + "'s secret";
+            document.getElementById('reveal-area').innerHTML = `
+                <div class="blk"><div class="lbl">${aLbl}</div>${renderFace(a)}<div class="nm">${a.name}</div></div>
+                <div class="blk"><div class="lbl">${bLbl}</div>${renderFace(b)}<div class="nm">${b.name}</div></div>`;
+
+            document.getElementById('game-over-overlay').classList.add('active');
+        }
+
+        function restartGame() {
+            document.getElementById('game-over-overlay').classList.remove('active');
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('setup-screen').style.display = 'block';
+            state = null;
+            showHighScores();
+        }
+
+        function quitGame() {
+            GameUtils.showModal('Quit Game?', 'Your progress will be lost.', [
+                { text: 'Cancel' },
+                { text: 'Quit', primary: true, action: () => {
+                    document.getElementById('game-screen').style.display = 'none';
+                    document.getElementById('pick-screen').style.display = 'none';
+                    document.getElementById('setup-screen').style.display = 'block';
+                    state = null;
+                    showHighScores();
+                }}
+            ]);
+        }
+
+        // ---------- High scores ----------
+        function showHighScores() {
+            const scores = GameUtils.highScores.get('guesswho');
+            const el = document.getElementById('hi-scores');
+            if (scores.length === 0) { el.innerHTML = ''; return; }
+            let html = '<h3 style="margin-bottom:10px;">High Scores</h3><table class="high-scores-table"><thead><tr><th>#</th><th>Player</th><th>Score</th><th>Difficulty</th><th>Questions</th></tr></thead><tbody>';
+            scores.slice(0, 5).forEach((s, i) => {
+                html += `<tr><td>${i+1}</td><td>${GameUtils.escapeHtml(s.player)}</td><td>${s.score}</td><td>${s.difficulty || '-'}</td><td>${s.questions != null ? s.questions : '-'}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            el.innerHTML = html;
+        }
+
+        showHighScores();
+    </script>
+</body>
+</html>
