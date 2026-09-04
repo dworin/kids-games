@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Letter Sounds - Game Arcade</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { touch-action: manipulation; -webkit-text-size-adjust: 100%; font-family: 'Fredoka', sans-serif; }
+
+        .ls-title { font-family: 'Fredoka', sans-serif; font-size: 2rem; font-weight: 700; text-align: center; margin-bottom: 4px; background: linear-gradient(135deg, #f59e0b, #10b981, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .ls-sub { text-align: center; color: var(--text-secondary); margin-bottom: 18px; font-size: 1rem; }
+
+        .setup-section { margin: 16px 0; }
+        .sec-label { font-weight: 600; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; text-align: center; }
+        .opt-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .opt-btn { flex: 1; max-width: 170px; min-width: 90px; padding: 12px 10px; background: var(--dark-bg); border: 2px solid var(--border-color); border-radius: 10px; color: var(--text-primary); font-family: 'Fredoka', sans-serif; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .opt-btn:hover { border-color: var(--primary-color); background: var(--card-hover); }
+        .opt-btn.active { border-color: var(--primary-color); background: var(--primary-color); color: #fff; }
+        .opt-btn .opt-desc { display: block; font-size: 0.7rem; color: var(--text-secondary); margin-top: 2px; }
+        .opt-btn.active .opt-desc { color: rgba(255,255,255,0.8); }
+
+        .big-btn-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 18px 0; }
+        .big-mode-btn { flex: 1; max-width: 260px; min-width: 200px; padding: 22px 16px; border: none; border-radius: 16px; cursor: pointer; font-family: 'Fredoka', sans-serif; color: #fff; text-align: center; transition: transform 0.15s, box-shadow 0.2s; box-shadow: var(--shadow); }
+        .big-mode-btn:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+        .big-mode-btn .bm-icon { font-size: 2.4rem; display: block; margin-bottom: 6px; }
+        .big-mode-btn .bm-title { font-size: 1.2rem; font-weight: 700; display: block; }
+        .big-mode-btn .bm-desc { font-size: 0.8rem; opacity: 0.9; display: block; margin-top: 4px; }
+        .big-mode-btn.explore { background: linear-gradient(135deg, #10b981, #059669); }
+        .big-mode-btn.quiz { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+
+        .start-btn { display: block; margin: 20px auto 0; padding: 14px 50px; background: linear-gradient(135deg, #f59e0b, #ea580c); color: #fff; border: none; border-radius: 12px; font-size: 1.2rem; font-weight: 700; cursor: pointer; letter-spacing: 1px; box-shadow: 0 4px 18px rgba(245,158,11,0.35); transition: transform 0.1s, box-shadow 0.2s; }
+        .start-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(245,158,11,0.5); }
+
+        /* Explore grid */
+        .explore-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; margin: 14px 0; }
+        .explore-card { background: var(--dark-bg); border: 2px solid var(--border-color); border-radius: 12px; padding: 10px 6px; text-align: center; cursor: pointer; transition: all 0.15s; }
+        .explore-card:hover { border-color: var(--primary-color); }
+        .explore-card.playing { border-color: #f59e0b; background: var(--card-hover); animation: pulseCard 0.5s ease-in-out infinite alternate; }
+        @keyframes pulseCard { to { transform: scale(1.06); } }
+        .explore-card .ec-letters { font-size: 1.6rem; font-weight: 700; color: var(--primary-color); }
+        .explore-card .ec-emoji { font-size: 1.8rem; margin: 2px 0; }
+        .explore-card .ec-word { font-size: 0.7rem; color: var(--text-secondary); }
+
+        /* Quiz */
+        .quiz-top { display: flex; justify-content: space-around; align-items: center; background: var(--card-bg); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; flex-wrap: wrap; gap: 6px; }
+        .qbox { text-align: center; flex: 1; min-width: 70px; }
+        .qbox .qv { font-size: 1.3rem; font-weight: 700; color: var(--primary-color); display: block; }
+        .qbox .ql { font-size: 0.65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+        .qbox .qv.streak-hot { color: #f59e0b; }
+        .qbox .qv.streak-fire { color: #ec4899; animation: blaze 0.3s ease-in-out infinite alternate; }
+        @keyframes blaze { to { transform: scale(1.15); } }
+        .progress-wrap { height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; margin-bottom: 18px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary-color), var(--success-color)); border-radius: 4px; transition: width 0.3s ease; width: 0%; }
+
+        .question-prompt { text-align: center; font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 10px; }
+        .target-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 18px; }
+        .target-badge { width: 130px; height: 130px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); display: flex; align-items: center; justify-content: center; font-size: 3.6rem; font-weight: 700; color: #fff; box-shadow: var(--shadow-lg); margin-bottom: 12px; }
+        .target-badge.emoji-badge { background: linear-gradient(135deg, #f59e0b, #ea580c); font-size: 4.4rem; }
+        .sound-btn { padding: 10px 24px; background: var(--dark-bg); border: 2px solid var(--primary-color); color: var(--text-primary); border-radius: 10px; font-family: 'Fredoka', sans-serif; font-size: 1rem; cursor: pointer; transition: all 0.15s; }
+        .sound-btn:hover { background: var(--primary-color); }
+        .sound-btn:active { transform: scale(0.96); }
+
+        .choice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 12px; max-width: 560px; margin: 0 auto; }
+        .choice-btn { background: var(--dark-bg); border: 3px solid var(--border-color); border-radius: 14px; padding: 18px 8px; cursor: pointer; text-align: center; transition: all 0.15s; font-family: 'Fredoka', sans-serif; color: var(--text-primary); }
+        .choice-btn:hover:not(:disabled) { border-color: var(--primary-color); background: var(--card-hover); transform: translateY(-2px); }
+        .choice-btn .cb-main { font-size: 2.6rem; display: block; }
+        .choice-btn.letters .cb-main { font-size: 2.2rem; font-weight: 700; color: var(--primary-color); }
+        .choice-btn.correct { border-color: #4ade80; background: rgba(74,222,128,0.15); }
+        .choice-btn.wrong { border-color: #f87171; background: rgba(248,113,113,0.15); animation: shake 0.35s; }
+        .choice-btn:disabled { cursor: default; }
+        @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+        .feedback-box { text-align: center; margin: 18px auto 0; max-width: 480px; }
+        .feedback-msg { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+        .feedback-msg.good { color: #4ade80; }
+        .feedback-msg.bad { color: #f87171; }
+        .feedback-sub { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 12px; }
+        .celebrate { font-size: 1.6rem; text-align: center; }
+
+        /* Results */
+        .result-title { font-family: 'Fredoka', sans-serif; font-size: 1.8rem; font-weight: 700; text-align: center; margin-bottom: 6px; color: #4ade80; }
+        .result-stars { font-size: 2.2rem; text-align: center; margin: 8px 0 12px; letter-spacing: 8px; }
+        .result-msg { text-align: center; color: var(--text-secondary); margin-bottom: 16px; }
+        .result-stats { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 14px 0; }
+        .rs-item { background: var(--dark-bg); border-radius: 10px; padding: 12px 18px; text-align: center; min-width: 90px; }
+        .rs-item .rv { font-size: 1.4rem; font-weight: 700; color: var(--primary-color); display: block; }
+        .rs-item .rl { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+
+        @media (max-width: 600px) {
+            .ls-title { font-size: 1.5rem; }
+            .target-badge { width: 100px; height: 100px; font-size: 2.8rem; }
+            .target-badge.emoji-badge { font-size: 3.4rem; }
+            .choice-btn .cb-main { font-size: 2.1rem; }
+            .choice-btn.letters .cb-main { font-size: 1.8rem; }
+            .explore-grid { grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <h1>Letter Sounds</h1>
+            <button class="back-btn" onclick="GameUtils.goToLauncher()">Home</button>
+        </div>
+
+        <!-- ── Setup ── -->
+        <div class="game-container" id="setup-screen">
+            <div class="ls-title">Letter Sounds</div>
+            <p class="ls-sub">Learn which sound each letter makes!</p>
+
+            <div class="big-btn-row">
+                <button class="big-mode-btn explore" onclick="startExplore()">
+                    <span class="bm-icon">&#128218;</span>
+                    <span class="bm-title">Explore Letters</span>
+                    <span class="bm-desc">Tap any letter to hear its sound</span>
+                </button>
+                <div class="big-mode-btn quiz" style="cursor:default;">
+                    <span class="bm-icon">&#127919;</span>
+                    <span class="bm-title">Sound Quiz</span>
+                    <span class="bm-desc">Pick your options below and start!</span>
+                </div>
+            </div>
+
+            <div class="setup-section">
+                <div class="sec-label">Difficulty</div>
+                <div class="opt-row" id="diff-row">
+                    <button class="opt-btn active" data-val="easy">Easy<span class="opt-desc">3 choices</span></button>
+                    <button class="opt-btn" data-val="medium">Medium<span class="opt-desc">4 choices</span></button>
+                    <button class="opt-btn" data-val="hard">Hard<span class="opt-desc">Tricky look-alikes</span></button>
+                </div>
+            </div>
+            <div class="setup-section">
+                <div class="sec-label">Rounds</div>
+                <div class="opt-row" id="rounds-row">
+                    <button class="opt-btn active" data-val="10">10</button>
+                    <button class="opt-btn" data-val="15">15</button>
+                    <button class="opt-btn" data-val="26">All 26</button>
+                </div>
+            </div>
+            <button class="start-btn" onclick="startQuiz()">Start Quiz!</button>
+
+            <div style="margin-top:18px;" id="hs-setup"></div>
+        </div>
+
+        <!-- ── Explore ── -->
+        <div class="game-container" id="explore-screen" style="display:none;">
+            <div class="ls-title" style="font-size:1.4rem;">Explore Letters</div>
+            <p class="ls-sub">Tap a letter to hear how it sounds!</p>
+            <div class="btn-group" style="justify-content:center; margin-bottom:12px;">
+                <button class="btn btn-secondary" id="atoz-btn" onclick="playAtoZ()">&#9654; Play A to Z</button>
+                <button class="btn btn-secondary" onclick="backToMenu()">Back to Menu</button>
+            </div>
+            <div class="explore-grid" id="explore-grid"></div>
+        </div>
+
+        <!-- ── Quiz ── -->
+        <div id="quiz-screen" style="display:none;">
+            <div class="quiz-top">
+                <div class="qbox"><span class="qv" id="q-round">1/10</span><span class="ql">Round</span></div>
+                <div class="qbox"><span class="qv" id="q-score">0</span><span class="ql">Score</span></div>
+                <div class="qbox"><span class="qv" id="q-streak">0</span><span class="ql">Streak</span></div>
+            </div>
+            <div class="progress-wrap"><div class="progress-fill" id="progress-fill"></div></div>
+
+            <div class="question-prompt" id="question-prompt"></div>
+            <div class="target-wrap">
+                <div class="target-badge" id="target-badge"></div>
+                <button class="sound-btn" id="sound-btn" onclick="replaySound()">&#128266; Hear it again</button>
+            </div>
+
+            <div class="choice-grid" id="choice-grid"></div>
+
+            <div class="feedback-box" id="feedback-box" style="display:none;">
+                <div class="feedback-msg" id="feedback-msg"></div>
+                <div class="feedback-sub" id="feedback-sub"></div>
+                <button class="btn btn-success" id="next-btn" onclick="nextRound()">Next</button>
+            </div>
+
+            <div class="btn-group" style="justify-content:center; margin-top:16px;">
+                <button class="btn btn-secondary" onclick="quitQuiz()">Quit</button>
+            </div>
+        </div>
+
+        <!-- ── Results ── -->
+        <div class="game-container" id="results-screen" style="display:none;"></div>
+
+        <!-- ── High Scores ── -->
+        <div class="game-container" id="hs-container">
+            <h3 style="margin-bottom:12px;">High Scores</h3>
+            <div id="high-scores"></div>
+            <div style="margin-top:14px;"><div id="game-stats"></div></div>
+        </div>
+    </div>
+
+    <script src="../js/utils.js"></script>
+    <script>
+    /* ================================================================
+       LETTER SOUNDS – phonics practice: match letters to their sounds
+       ================================================================ */
+
+    // ===== LETTER DATA =====
+    // sound: a rough phonetic spelling used for speech synthesis drilling
+    const LETTERS = [
+        { ch:'A', word:'Apple',     emoji:'\u{1F34E}', sound:'a' },
+        { ch:'B', word:'Ball',      emoji:'⚽',     sound:'buh' },
+        { ch:'C', word:'Cat',       emoji:'\u{1F431}', sound:'kuh' },
+        { ch:'D', word:'Dog',       emoji:'\u{1F436}', sound:'duh' },
+        { ch:'E', word:'Elephant',  emoji:'\u{1F418}', sound:'eh' },
+        { ch:'F', word:'Fish',      emoji:'\u{1F41F}', sound:'fff' },
+        { ch:'G', word:'Grapes',    emoji:'\u{1F347}', sound:'guh' },
+        { ch:'H', word:'Hat',       emoji:'\u{1F3A9}', sound:'huh' },
+        { ch:'I', word:'Ice Cream', emoji:'\u{1F366}', sound:'ih' },
+        { ch:'J', word:'Juice',     emoji:'\u{1F9C3}', sound:'juh' },
+        { ch:'K', word:'Kite',      emoji:'\u{1FA81}', sound:'kuh' },
+        { ch:'L', word:'Lion',      emoji:'\u{1F981}', sound:'lll' },
+        { ch:'M', word:'Moon',      emoji:'\u{1F319}', sound:'mmm' },
+        { ch:'N', word:'Nose',      emoji:'\u{1F443}', sound:'nnn' },
+        { ch:'O', word:'Octopus',   emoji:'\u{1F419}', sound:'ah' },
+        { ch:'P', word:'Pig',       emoji:'\u{1F437}', sound:'puh' },
+        { ch:'Q', word:'Queen',     emoji:'\u{1F451}', sound:'kwuh' },
+        { ch:'R', word:'Rainbow',   emoji:'\u{1F308}', sound:'rrr' },
+        { ch:'S', word:'Sun',       emoji:'☀️', sound:'sss' },
+        { ch:'T', word:'Tiger',     emoji:'\u{1F42F}', sound:'tuh' },
+        { ch:'U', word:'Umbrella',  emoji:'☂️', sound:'uh' },
+        { ch:'V', word:'Violin',    emoji:'\u{1F3BB}', sound:'vvv' },
+        { ch:'W', word:'Watermelon',emoji:'\u{1F349}', sound:'wuh' },
+        { ch:'X', word:'X-ray',     emoji:'\u{1FA7B}', sound:'ks' },
+        { ch:'Y', word:'Yo-yo',     emoji:'\u{1FA80}', sound:'yuh' },
+        { ch:'Z', word:'Zebra',     emoji:'\u{1F993}', sound:'zzz' }
+    ];
+    const BY_LETTER = {};
+    LETTERS.forEach(l => BY_LETTER[l.ch] = l);
+
+    // Commonly confused letter sounds/shapes, used for harder distractors
+    const CONFUSE = {
+        B:['D','P','Q'], D:['B','P','Q'], P:['B','D','Q'], Q:['B','D','P'],
+        M:['N'], N:['M'],
+        C:['K','G'], K:['C','G'], G:['K','C','J'], J:['G'],
+        F:['V'], V:['F','W'], W:['V'],
+        S:['Z','C'], Z:['S'],
+        I:['E'], E:['I'],
+        O:['U'], U:['O']
+    };
+
+    // ===== SPEECH =====
+    function speak(text, rate) {
+        if (!('speechSynthesis' in window)) return;
+        try {
+            speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.rate = rate || 0.85;
+            u.pitch = 1.15;
+            speechSynthesis.speak(u);
+        } catch (e) { /* speech unsupported or blocked - fail silently */ }
+    }
+
+    function speakLetterSound(entry) {
+        speak(`${entry.sound}... ${entry.sound}... ${entry.sound}`, 0.8);
+    }
+
+    function speakWord(entry) {
+        speak(`${entry.word}!`, 0.85);
+    }
+
+    function speakTeach(entry) {
+        speak(`${entry.ch}. ${entry.sound}, ${entry.sound}, ${entry.sound}. ${entry.word}!`, 0.85);
+    }
+
+    // ===== STATE =====
+    let Q = null;
+
+    function freshQuiz() {
+        return {
+            diff: 'easy', totalRounds: 10, round: 0,
+            score: 0, streak: 0, maxStreak: 0, correctCount: 0,
+            rounds: [], current: null, answered: false
+        };
+    }
+
+    // ===== SETUP HELPERS =====
+    document.querySelectorAll('.opt-row').forEach(row => {
+        row.querySelectorAll('.opt-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                row.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+    });
+
+    function getSelected(rowId) {
+        const row = document.getElementById(rowId);
+        const active = row.querySelector('.opt-btn.active');
+        return active ? active.dataset.val : '';
+    }
+
+    function showScreen(id) {
+        ['setup-screen', 'explore-screen', 'quiz-screen', 'results-screen'].forEach(s => {
+            document.getElementById(s).style.display = s === id ? '' : 'none';
+        });
+    }
+
+    function backToMenu() {
+        if ('speechSynthesis' in window) speechSynthesis.cancel();
+        showScreen('setup-screen');
+        renderHighScores();
+    }
+
+    // ===== EXPLORE MODE =====
+    function startExplore() {
+        renderExploreGrid();
+        showScreen('explore-screen');
+    }
+
+    function renderExploreGrid() {
+        const grid = document.getElementById('explore-grid');
+        grid.innerHTML = '';
+        LETTERS.forEach(entry => {
+            const card = document.createElement('div');
+            card.className = 'explore-card';
+            card.id = `explore-${entry.ch}`;
+            card.innerHTML = `
+                <div class="ec-letters">${entry.ch}${entry.ch.toLowerCase()}</div>
+                <div class="ec-emoji">${entry.emoji}</div>
+                <div class="ec-word">${entry.word}</div>
+            `;
+            card.addEventListener('click', () => playExploreLetter(entry));
+            grid.appendChild(card);
+        });
+    }
+
+    function playExploreLetter(entry) {
+        document.querySelectorAll('.explore-card').forEach(c => c.classList.remove('playing'));
+        const card = document.getElementById(`explore-${entry.ch}`);
+        if (card) card.classList.add('playing');
+        speakTeach(entry);
+    }
+
+    let atozRunning = false;
+    async function playAtoZ() {
+        if (atozRunning) return;
+        atozRunning = true;
+        const btn = document.getElementById('atoz-btn');
+        btn.disabled = true;
+        for (const entry of LETTERS) {
+            if (!atozRunning) break;
+            playExploreLetter(entry);
+            await GameUtils.delay(1400);
+        }
+        document.querySelectorAll('.explore-card').forEach(c => c.classList.remove('playing'));
+        btn.disabled = false;
+        atozRunning = false;
+    }
+
+    // ===== QUIZ MODE =====
+    function startQuiz() {
+        atozRunning = false;
+        Q = freshQuiz();
+        Q.diff = getSelected('diff-row');
+        Q.totalRounds = parseInt(getSelected('rounds-row'));
+        Q.rounds = buildRounds(Q.diff, Q.totalRounds);
+
+        showScreen('quiz-screen');
+        document.getElementById('feedback-box').style.display = 'none';
+        runRound();
+    }
+
+    function buildRounds(diff, count) {
+        const pool = GameUtils.shuffleArray(LETTERS.map(l => l.ch));
+        const letters = pool.slice(0, Math.min(count, LETTERS.length));
+        return letters.map((ch, i) => ({
+            target: BY_LETTER[ch],
+            type: i % 2 === 0 ? 'letterToPicture' : 'pictureToLetter'
+        }));
+    }
+
+    function pickDistractors(correctCh, count, diff) {
+        const others = LETTERS.map(l => l.ch).filter(c => c !== correctCh);
+        let preferred = [];
+        if (diff === 'hard' && CONFUSE[correctCh]) {
+            preferred = CONFUSE[correctCh].filter(c => others.includes(c));
+        }
+        let avoid = [];
+        if (diff === 'easy' && CONFUSE[correctCh]) {
+            avoid = CONFUSE[correctCh];
+        }
+        const rest = GameUtils.shuffleArray(others.filter(c => !preferred.includes(c) && !avoid.includes(c)));
+        const fallback = GameUtils.shuffleArray(others.filter(c => !preferred.includes(c)));
+
+        const picks = [];
+        preferred.forEach(c => { if (picks.length < count) picks.push(c); });
+        rest.forEach(c => { if (picks.length < count && !picks.includes(c)) picks.push(c); });
+        fallback.forEach(c => { if (picks.length < count && !picks.includes(c)) picks.push(c); });
+        return picks.slice(0, count);
+    }
+
+    function runRound() {
+        Q.round++;
+        const r = Q.rounds[Q.round - 1];
+        Q.current = r;
+        Q.answered = false;
+
+        const numChoices = Q.diff === 'easy' ? 3 : 4;
+        const distractCh = pickDistractors(r.target.ch, numChoices - 1, Q.diff);
+        const choiceLetters = GameUtils.shuffleArray([r.target.ch, ...distractCh]);
+
+        document.getElementById('q-round').textContent = `${Q.round}/${Q.totalRounds}`;
+        document.getElementById('q-score').textContent = Q.score;
+        const streakEl = document.getElementById('q-streak');
+        streakEl.textContent = Q.streak;
+        streakEl.className = 'qv' + (Q.streak >= 8 ? ' streak-fire' : Q.streak >= 4 ? ' streak-hot' : '');
+        document.getElementById('progress-fill').style.width = `${((Q.round - 1) / Q.totalRounds) * 100}%`;
+
+        const badge = document.getElementById('target-badge');
+        const prompt = document.getElementById('question-prompt');
+        const grid = document.getElementById('choice-grid');
+        grid.innerHTML = '';
+
+        if (r.type === 'letterToPicture') {
+            prompt.textContent = 'Which picture starts with this letter’s sound?';
+            badge.className = 'target-badge';
+            badge.textContent = r.target.ch + r.target.ch.toLowerCase();
+            choiceLetters.forEach(ch => {
+                const entry = BY_LETTER[ch];
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn pictures';
+                btn.innerHTML = `<span class="cb-main">${entry.emoji}</span>`;
+                btn.addEventListener('click', () => handleChoice(btn, ch, r.target.ch));
+                grid.appendChild(btn);
+            });
+        } else {
+            prompt.textContent = 'Which letter does this picture start with?';
+            badge.className = 'target-badge emoji-badge';
+            badge.textContent = r.target.emoji;
+            choiceLetters.forEach(ch => {
+                const entry = BY_LETTER[ch];
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn letters';
+                btn.innerHTML = `<span class="cb-main">${entry.ch}${entry.ch.toLowerCase()}</span>`;
+                btn.addEventListener('click', () => handleChoice(btn, ch, r.target.ch));
+                grid.appendChild(btn);
+            });
+        }
+
+        document.getElementById('feedback-box').style.display = 'none';
+        replaySound();
+    }
+
+    function replaySound() {
+        const r = Q.current;
+        if (!r) return;
+        if (r.type === 'letterToPicture') speakLetterSound(r.target);
+        else speakWord(r.target);
+    }
+
+    function handleChoice(btn, chosenCh, correctCh) {
+        if (Q.answered) return;
+        Q.answered = true;
+
+        const allBtns = document.querySelectorAll('.choice-btn');
+        allBtns.forEach(b => b.disabled = true);
+
+        const isCorrect = chosenCh === correctCh;
+        const correctEntry = BY_LETTER[correctCh];
+
+        if (isCorrect) {
+            btn.classList.add('correct');
+            Q.streak++;
+            Q.maxStreak = Math.max(Q.maxStreak, Q.streak);
+            Q.correctCount++;
+            let pts = 10;
+            if (Q.streak >= 8) pts += 10;
+            else if (Q.streak >= 4) pts += 5;
+            Q.score += pts;
+            document.getElementById('q-score').textContent = Q.score;
+            const streakEl = document.getElementById('q-streak');
+            streakEl.textContent = Q.streak;
+            streakEl.className = 'qv' + (Q.streak >= 8 ? ' streak-fire' : Q.streak >= 4 ? ' streak-hot' : '');
+
+            document.getElementById('feedback-msg').textContent = `✅ Yes! +${pts} points`;
+            document.getElementById('feedback-msg').className = 'feedback-msg good';
+            document.getElementById('feedback-sub').textContent = `${correctEntry.ch} says "${correctEntry.sound}" like ${correctEntry.word}!`;
+            speak(`Great job! ${correctEntry.ch} says ${correctEntry.sound}, like ${correctEntry.word}!`, 0.95);
+        } else {
+            btn.classList.add('wrong');
+            markCorrectButton(correctCh);
+            Q.streak = 0;
+            document.getElementById('q-streak').textContent = 0;
+            document.getElementById('q-streak').className = 'qv';
+
+            document.getElementById('feedback-msg').textContent = `Not quite!`;
+            document.getElementById('feedback-msg').className = 'feedback-msg bad';
+            document.getElementById('feedback-sub').textContent = `${correctEntry.ch} says "${correctEntry.sound}" like ${correctEntry.word}!`;
+            speak(`Not quite. ${correctEntry.ch} says ${correctEntry.sound}, like ${correctEntry.word}!`, 0.85);
+        }
+
+        document.getElementById('feedback-box').style.display = '';
+        document.getElementById('next-btn').textContent = Q.round >= Q.totalRounds ? 'See Results' : 'Next';
+    }
+
+    function markCorrectButton(correctCh) {
+        const grid = document.getElementById('choice-grid');
+        const btns = grid.querySelectorAll('.choice-btn');
+        const r = Q.current;
+        btns.forEach(b => {
+            const main = b.querySelector('.cb-main').textContent;
+            const matches = r.type === 'letterToPicture'
+                ? main === BY_LETTER[correctCh].emoji
+                : main.toUpperCase() === (correctCh + correctCh);
+            if (matches) b.classList.add('correct');
+        });
+    }
+
+    function nextRound() {
+        if (Q.round >= Q.totalRounds) {
+            finishQuiz();
+            return;
+        }
+        runRound();
+    }
+
+    function quitQuiz() {
+        if ('speechSynthesis' in window) speechSynthesis.cancel();
+        backToMenu();
+    }
+
+    function finishQuiz() {
+        document.getElementById('progress-fill').style.width = '100%';
+        const acc = Math.round((Q.correctCount / Q.totalRounds) * 100);
+        const stars = acc === 100 ? 3 : acc >= 80 ? 2 : acc >= 50 ? 1 : 0;
+        const starStr = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+        const msg = getPerformanceMsg(acc);
+
+        let html = `<div class="result-title">Quiz Complete!</div>`;
+        html += `<div class="result-stars">${starStr}</div>`;
+        html += `<div class="result-msg">${msg}</div>`;
+        html += `<div class="result-stats">`;
+        html += `<div class="rs-item"><span class="rv">${Q.score}</span><span class="rl">Score</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${Q.correctCount}/${Q.totalRounds}</span><span class="rl">Correct</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${acc}%</span><span class="rl">Accuracy</span></div>`;
+        html += `<div class="rs-item"><span class="rv">${Q.maxStreak}</span><span class="rl">Best Streak</span></div>`;
+        html += `</div>`;
+        html += `<div class="btn-group" style="margin-top:18px; justify-content:center;">`;
+        html += `<button class="btn btn-success" onclick="startQuiz()">Play Again</button>`;
+        html += `<button class="btn btn-secondary" onclick="startExplore()">Explore Letters</button>`;
+        html += `<button class="btn btn-secondary" onclick="backToMenu()">Menu</button>`;
+        html += `</div>`;
+
+        const pn = GameUtils.playerName.get(1);
+        GameUtils.highScores.add('lettersounds', pn, Q.score, { accuracy: acc, rounds: Q.totalRounds, difficulty: Q.diff });
+        GameUtils.stats.update('lettersounds', acc >= 70 ? 'win' : 'loss');
+
+        document.getElementById('results-screen').innerHTML = html;
+        showScreen('results-screen');
+        speak(acc >= 70 ? 'Awesome work!' : 'Nice try! Keep practicing!', 0.95);
+        renderHighScores();
+    }
+
+    function getPerformanceMsg(acc) {
+        if (acc === 100) return 'Perfect! You know every sound!';
+        if (acc >= 90) return 'Amazing! You are a letter sounds superstar!';
+        if (acc >= 70) return 'Great job! Your letter sounds are getting strong!';
+        if (acc >= 50) return 'Good effort! Keep practicing those sounds!';
+        return 'Nice try! Explore the letters, then try again!';
+    }
+
+    function renderHighScores() {
+        GameUtils.renderHighScores('lettersounds', 'high-scores');
+        GameUtils.renderStats('lettersounds', 'game-stats');
+        GameUtils.renderHighScores('lettersounds', 'hs-setup');
+    }
+
+    // ===== INIT =====
+    renderHighScores();
+    </script>
+</body>
+</html>
