@@ -32,7 +32,8 @@ A collection of 32 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── scrabble.html       # Classic word tile game
     ├── monopoly.html       # Classic property trading board game
     ├── zoombini.html       # Allergic Cliffs logic/deduction puzzle
-    └── guesswho.html       # Character-deduction yes/no question game
+    ├── guesswho.html       # Character-deduction yes/no question game
+    └── lettersounds.html   # Phonics game matching letters to their sounds
 ```
 
 ## Key Features
@@ -223,6 +224,16 @@ A collection of 32 classic games built with vanilla HTML, CSS, and JavaScript. D
 - AI difficulty: Easy (random splitting question), Medium (top-half split), Hard (always optimal ~50/50 split)
 - Score (1P win only) = max(100, 700 − (questions−1)×60) × difficulty multiplier (1/2/3)
 - 2-player mode: pass-and-play with device-passing overlays and per-player tracking boards/secret cards
+
+### Letter Sounds
+- Phonics game for kids who know their letters but are still learning the sounds
+- Uses the browser's Web Speech API (`speechSynthesis`) to say each letter's sound and example word aloud - no audio files needed
+- Explore mode: tap-to-hear grid of all 26 letters (uppercase + lowercase), each paired with an emoji picture and word (e.g. "Bb" + ⚽ + "Ball"); "Play A to Z" auto-cycles through the whole alphabet
+- Quiz mode alternates two question types each round: "hear/see the letter, pick the matching picture" and "see the picture, pick the matching starting letter"
+- Difficulty controls choice count and distractor selection: Easy (3 choices, avoids commonly-confused letters), Medium (4 choices, random), Hard (4 choices, prioritizes look-alike/sound-alike distractors like B/D/P/Q, M/N, C/K/G)
+- Rounds: 10, 15, or all 26 letters, no repeats within a round set
+- Scoring: 10 points per correct answer, streak bonus (+5 at streak 4+, +10 at streak 8+); wrong answers reveal the correct letter/picture with a spoken explanation and reset the streak (no penalty)
+- Single-player only (no AI/2P) - designed for one child to practice at their own pace
 
 ## Development
 To test locally:
