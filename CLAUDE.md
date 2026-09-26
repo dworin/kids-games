@@ -1,7 +1,7 @@
 # Kids Games - Classic Game Arcade
 
 ## Project Overview
-A collection of 32 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
+A collection of 36 classic games built with vanilla HTML, CSS, and JavaScript. Designed for static hosting (GitHub Pages). No build step required.
 
 ## Structure
 ```
@@ -33,7 +33,8 @@ A collection of 32 classic games built with vanilla HTML, CSS, and JavaScript. D
     ├── monopoly.html       # Classic property trading board game
     ├── zoombini.html       # Allergic Cliffs logic/deduction puzzle
     ├── guesswho.html       # Character-deduction yes/no question game
-    └── lettersounds.html   # Phonics game matching letters to their sounds
+    ├── lettersounds.html   # Phonics game matching letters to their sounds
+    └── wordle.html         # Five-letter word guessing game
 ```
 
 ## Key Features
@@ -234,6 +235,20 @@ A collection of 32 classic games built with vanilla HTML, CSS, and JavaScript. D
 - Rounds: 10, 15, or all 26 letters, no repeats within a round set
 - Scoring: 10 points per correct answer, streak bonus (+5 at streak 4+, +10 at streak 8+); wrong answers reveal the correct letter/picture with a spoken explanation and reset the streak (no penalty)
 - Single-player only (no AI/2P) - designed for one child to practice at their own pace
+
+### Wordle
+- Guess a hidden five-letter word; tiles color after each guess
+  - Green = right letter in the right spot, Yellow = right letter wrong spot, Gray = letter not in the word
+- Repeated letters scored with a two-pass algorithm (greens claimed first, then yellows against remaining counts)
+- Word lists: 1217 curated common answers + 3431 extra words accepted as guesses only (4648 total)
+- Difficulty: Easy (7 guesses, ×1), Medium (6 guesses, ×2), Hard (6 guesses, ×3, hard mode on)
+  - Hard mode enforces reuse of every revealed hint: greens must stay in position, yellows must appear somewhere
+- On-screen keyboard tracks letter states (green > yellow > gray); physical keyboard also works
+- Toast messages for "Not enough letters", "Not in word list", and hard-mode violations; row shakes on reject
+- Result modal shows the emoji share grid with a Copy Result button
+- Score (1P win) = max(100, 700 − (guesses−1)×100) × difficulty multiplier
+- 2-player mode: each player secretly picks a real five-letter word for the other (pass-and-play overlays);
+  after both rounds, fewer guesses wins — an unsolved word counts as maxGuesses + 1
 
 ## Development
 To test locally:
